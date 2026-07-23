@@ -1,4 +1,4 @@
-const S = '/assets/illuminati/sprites';
+const S = './assets/illuminati/sprites';
 
 export const ICONS = {
   clonesCommon: S + '/Section_Clones_Common.png',
@@ -443,18 +443,18 @@ export const TUTORIAL_STEPS = [
 ];
 
 export const ANIMATIONS = {
-  cloneCell: Array.from({length: 18}, (_, i) => '/assets/illuminati/sprites/Animation_GameCell-sheet-ipadhd_' + i + '.png'),
-  popups: Array.from({length: 31}, (_, i) => '/assets/illuminati/sprites/Animation_Popups-sheet-ipadhd_' + i + '.png'),
-  effects: ['/assets/illuminati/sprites/Effects-sheet-ipadhd_1.png', '/assets/illuminati/sprites/Effects-sheet-ipadhd_2.png', '/assets/illuminati/sprites/Effects-sheet-ipadhd_3.png', '/assets/illuminati/sprites/Effects-sheet-ipadhd_4.png'],
+  cloneCell: Array.from({length: 18}, (_, i) => './assets/illuminati/sprites/Animation_GameCell-sheet-ipadhd_' + i + '.png'),
+  popups: Array.from({length: 31}, (_, i) => './assets/illuminati/sprites/Animation_Popups-sheet-ipadhd_' + i + '.png'),
+  effects: ['./assets/illuminati/sprites/Effects-sheet-ipadhd_1.png', './assets/illuminati/sprites/Effects-sheet-ipadhd_2.png', './assets/illuminati/sprites/Effects-sheet-ipadhd_3.png', './assets/illuminati/sprites/Effects-sheet-ipadhd_4.png'],
   illuminatus: [S + '/CharactersStage01-sheet-ipadhd_0.png', S + '/CharactersStage02-sheet-ipadhd_0.png', S + '/CharactersStage03-sheet-ipadhd_0.png', S + '/CharactersStage04-sheet-ipadhd_0.png', S + '/Illumineus_End_Bright.png'],
 };
 
 export const WORLD_BACKGROUNDS = [
-  '/assets/illuminati/sprites/Backgrounds-sheet-ipadhd_0.png',
-  '/assets/illuminati/sprites/Backgrounds-sheet-ipadhd_1.png',
-  '/assets/illuminati/sprites/Backgrounds-sheet-ipadhd_2.png',
-  '/assets/illuminati/sprites/Backgrounds-sheet-ipadhd_3.png',
-  '/assets/illuminati/sprites/Backgrounds-sheet-ipadhd_0.png',
+  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_0.png',
+  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_1.png',
+  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_2.png',
+  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_3.png',
+  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_0.png',
 ];
 
 export const TG_BOT = 'masontokenbot/app';

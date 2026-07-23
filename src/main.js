@@ -1,6 +1,6 @@
 import { store } from './store.js';
 import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, SUPPORT_URL, TG_BOT, ILLUMINEUS, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, CLONE_PORTRAITS, SECTION_SPRITES, STAR_SPRITES, TUTORIAL_STEPS, ICONS, ANIMATIONS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS, WORLD_BACKGROUNDS } from './config.js';
-import { initTelegram, getTelegramUser } from './telegram.js';
+import { initTelegram, getTelegramUser, isInsideTelegram } from './telegram.js';
 import { initWallet, connectWallet, buyApe, sellApe } from './wallet.js';
 import { t, initLang, setLang, getLang } from './i18n.js';
 import { playTap, playBuy, playWin, playJackpot, playLose, playClick, playRouletteSpin, playPortal, playStar, playDailyBonus } from './sounds.js';
@@ -9,11 +9,11 @@ let currentScreen = 'loading';
 const $ = (s) => document.querySelector(s);
 
 const NAV_ICONS = {
-  empire: '/assets/illuminati/sprites/Icon_Eye_2.png',
-  clones: '/assets/illuminati/sprites/Section_Clones_Common.png',
-  boosts: '/assets/illuminati/sprites/video_ads_icon.png',
-  masons: '/assets/illuminati/sprites/goldStar.png',
-  wallet: '/assets/illuminati/sprites/diamond.png',
+  empire: './assets/illuminati/sprites/Icon_Eye_2.png',
+  clones: './assets/illuminati/sprites/Section_Clones_Common.png',
+  boosts: './assets/illuminati/sprites/video_ads_icon.png',
+  masons: './assets/illuminati/sprites/goldStar.png',
+  wallet: './assets/illuminati/sprites/diamond.png',
 };
 
 function fmt(n) {
@@ -183,7 +183,7 @@ function showGame() {
         <div class="scene-clones" id="sceneClones">
           ${ownedClones.slice(0, 8).map((c, i) => {
             const count = s.cloneCounts[c.id] || 0;
-            const portrait = '/assets/illuminati/sprites/' + c.portrait + '.png';
+            const portrait = './assets/illuminati/sprites/' + c.portrait + '.png';
             const positions = [
               {left:'5%',bottom:'8%'}, {left:'18%',bottom:'12%'}, {left:'32%',bottom:'6%'},
               {left:'46%',bottom:'10%'}, {left:'60%',bottom:'5%'}, {left:'74%',bottom:'11%'},
@@ -250,7 +250,7 @@ function showClones() {
         const cost = store.getCloneCost(c);
         const canBuy = s.apeBalance >= cost;
         const hasMgr = s.managerOwned[c.id + '_mgr'];
-        const portrait = '/assets/illuminati/sprites/' + c.portrait + '.png';
+        const portrait = './assets/illuminati/sprites/' + c.portrait + '.png';
         const upgradeCost = store.getCloneUpgradeCost(c.id);
         const canUpgrade = s.apeBalance >= upgradeCost;
         const cName = getLang() === 'ru' ? (c.nameRu || c.name) : c.name;
@@ -954,8 +954,15 @@ function updateComboDisplay() {
 initLang();
 document.getElementById('app').innerHTML = `<div class="loading"><div class="loading-ring"></div><p>${t('loading')}</p></div>`;
 setTimeout(() => {
-  const tg = getTelegramUser();
-  if (tg) { store.setTgUser(tg); currentScreen = 'game'; } else { currentScreen = 'auth'; }
+  if (isInsideTelegram()) {
+    const tg = getTelegramUser();
+    if (tg) store.setTgUser(tg);
+    currentScreen = 'game';
+  } else {
+    store.setDemoMode();
+    currentScreen = 'game';
+  }
   show();
-  if (currentScreen === 'game') { startGameLoop(); setTimeout(() => showDailyBonus(), 1500); }
+  startGameLoop();
+  setTimeout(() => showDailyBonus(), 1500);
 }, 600);
