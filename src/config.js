@@ -457,5 +457,5 @@ export const WORLD_BACKGROUNDS = [
   './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_0.png',
 ];
 
-export const TG_BOT = 'masontokenbot/app';
+export const TG_BOT = 'Illuminatemasonbot';
 export const SUPPORT_URL = 'https://t.me/Superadminist';
