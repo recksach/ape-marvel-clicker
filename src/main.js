@@ -1,1385 +1,591 @@
 import { store } from './store.js';
-import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, SUPPORT_URL, TG_BOT, ILLUMINEUS, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, CLONE_PORTRAITS, SECTION_SPRITES, STAR_SPRITES, TUTORIAL_STEPS, ICONS, ANIMATIONS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS, WORLD_BACKGROUNDS, OUTFIT_ITEMS, OUTFIT_SLOTS, OUTFIT_RARITIES, SET_BONUS, OUTFIT_DROP_RATES, MASON_EARN, COLLAB_SKINS } from './config.js';
-import { initTelegram, getTelegramUser, isInsideTelegram } from './telegram.js';
-import { initWallet, connectWallet, buyApe, sellApe } from './wallet.js';
-import { t, initLang, setLang, getLang } from './i18n.js';
-import { playTap, playBuy, playWin, playJackpot, playLose, playClick, playRouletteSpin, playPortal, playStar, playDailyBonus } from './sounds.js';
+import { RARITIES, ITEM_CATEGORIES, NPCS, LOCATIONS, MERGE_COST, MERGE_MATRIX, INITIAL_TUTORIAL, QUEST_DURATION } from './config.js';
+import { initLang, setLang, getLang, t } from './i18n.js';
+import { playTap, playCollect, playMerge, playQuest, playComplete, playError, playLevelUp } from './sounds.js';
 
-let currentScreen = 'loading';
-const $ = (s) => document.querySelector(s);
+let currentScreen = 'temple';
+let currentCategory = null;
+let currentNPC = null;
+let currentRarity = null;
 
-const NAV_ICONS = {
-  empire: './assets/illuminati/sprites/Icon_Eye_2.png',
-  clones: './assets/illuminati/sprites/Section_Clones_Common.png',
-  boosts: './assets/illuminati/sprites/video_ads_icon.png',
-  scrolls: './assets/illuminati/sprites/bronzeStar.png',
-  wardrobe: './assets/illuminati/sprites/person_purple.png',
-  masons: './assets/illuminati/sprites/goldStar.png',
-  casino: './assets/illuminati/sprites/diamond_ad_icon.png',
-  wallet: './assets/illuminati/sprites/diamond.png',
-};
+const $ = s => document.querySelector(s);
+const fmt = n => String(Math.floor(n));
 
-function fmt(n) {
-  if (n >= 1e30) return (n/1e30).toFixed(1)+'No';
-  if (n >= 1e27) return (n/1e27).toFixed(1)+'Oc';
-  if (n >= 1e24) return (n/1e24).toFixed(1)+'Sp';
-  if (n >= 1e21) return (n/1e21).toFixed(1)+'Sx';
-  if (n >= 1e18) return (n/1e18).toFixed(1)+'Qi';
-  if (n >= 1e15) return (n/1e15).toFixed(1)+'Qa';
-  if (n >= 1e12) return (n/1e12).toFixed(1)+'T';
-  if (n >= 1e9) return (n/1e9).toFixed(1)+'B';
-  if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
-  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
-  return String(Math.floor(n));
-}
-
-function getCostumeSprite() {
+/* ─── Topbar ─── */
+function topbar(title, extra) {
   const s = store.state;
-  const world = WORLDS[s.currentWorld];
-  const id = s.activeCostume;
-  if (id === 'default') return world.tapSprite || ILLUMINEUS.baseSprite;
-  const costume = COSTUMES.find(c => c.id === id);
-  return costume ? costume.sprite : world.tapSprite || ILLUMINEUS.baseSprite;
+  return `
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">${title}</span>
+      </div>
+      <div class="topbar-right">
+        <div class="currency-badge"><span class="currency-icon gold">●</span>${fmt(s.gold)}</div>
+        <div class="currency-badge"><span class="currency-icon crystal">⬡</span>${fmt(s.crystals)}</div>
+        <button class="lang-btn" onclick="W._lang()">${getLang() === 'en' ? 'EN' : 'RU'}</button>
+      </div>
+    </div>
+  `;
 }
 
-function getTapSprite() {
-  const s = store.state;
-  const world = WORLDS[s.currentWorld];
-  const id = s.activeCostume;
-  if (id === 'default') return world.tapSprite || ILLUMINEUS.baseSprite;
-  const costume = COSTUMES.find(c => c.id === id);
-  return costume ? costume.sprite : world.tapSprite || ILLUMINEUS.baseSprite;
-}
-
-function getStarDisplay(cloneId) {
-  const totalStars = store.state.cloneUpgrades[cloneId] || 0;
-  const starType = store.getCloneStarType(cloneId);
-  const starSprite = (STAR_SPRITES && STAR_SPRITES[starType]) || ICONS[starType + 'Star'] || '';
-  const count = Math.min(Math.floor(totalStars / (starType === 'gold' ? 1500 : starType === 'silver' ? 350 : 25)), 5);
-  if (count === 0) return '';
-  return `<div class="star-display">${'<img src="' + starSprite + '" class="star-img">'.repeat(count)}</div>`;
-}
-
-function navHTML(active) {
+/* ─── Bottom Nav ─── */
+function bottomNav(active) {
   const items = [
-    { key: 'empire', label: t('navEmpire'), screen: 'game' },
-    { key: 'clones', label: t('navClones'), screen: 'clones' },
-    { key: 'boosts', label: t('navBoosts'), screen: 'ads' },
-    { key: 'scrolls', label: t('scrollTitle'), screen: 'scrolls' },
-    { key: 'wardrobe', label: t('navWardrobe'), screen: 'wardrobe' },
-    { key: 'masons', label: t('navMasons'), screen: 'masons' },
-    { key: 'casino', label: t('navCasino'), screen: 'casino' },
-    { key: 'wallet', label: t('navWallet'), screen: 'wallet' },
+    { key: 'temple', label: t('nav_temple'), icon: '△' },
+    { key: 'collection', label: t('nav_collection'), icon: '☰' },
+    { key: 'merge', label: t('nav_merge'), icon: '⬡' },
+    { key: 'npc', label: t('nav_library'), icon: '◉' },
+    { key: 'inventory', label: t('nav_vault'), icon: '▣' },
   ];
   return `<div class="bottomnav">
-    ${items.map(it => {
-      const isActive = it.screen === active;
-      const targetId = it.key === 'clones' ? 'navClones' : it.key === 'boosts' ? 'navBoosts' : it.key === 'masons' ? 'navMasons' : it.key === 'scrolls' ? 'navScrolls' : '';
-      return `<button class="navitem ${isActive ? 'active' : ''}" ${targetId ? `id="${targetId}"` : ''} onclick="W._nav('${it.screen}')">
-        <img src="${NAV_ICONS[it.key]}" class="ico-img" alt="">
+    ${items.map(it => `
+      <button class="nav-item ${it.key === active ? 'active' : ''}" onclick="W._nav('${it.key}')">
+        <div class="nav-icon">${it.icon}</div>
         <span class="nav-label">${it.label}</span>
-      </button>`;
-    }).join('')}
-  </div>`;
-}
-
-function topbarHTML(screenTitle, worldColor) {
-  const s = store.state;
-  const income = store.calcIncomePerSec();
-  const langBtn = getLang() === 'en' ? 'EN' : 'RU';
-  return `<div class="topbar">
-    <div class="topbar-left">
-      <span class="hero-name" style="color:${worldColor || '#f7c948'}">${screenTitle}</span>
-    </div>
-    <div class="topbar-right">
-      <button class="lang-toggle" onclick="W._toggleLang()">${langBtn}</button>
-      <div class="diamond-badge">
-        <img src="${ICONS.diamond}" class="ico-img" style="width:18px;height:18px;" alt="">
-        <span class="diamond-amount">${s.diamonds}</span>
-      </div>
-      <div class="ape-badge">
-        <div class="ape-icon">A</div>
-        <div class="ape-col">
-          <span class="ape-amount" id="topBal">${fmt(s.apeBalance)}</span>
-          <span class="ape-ps">${fmt(income)}/s</span>
-        </div>
-      </div>
-    </div>
-  </div>`;
-}
-
-function showAuth() {
-  const tg = getTelegramUser();
-  if (tg) { store.setTgUser(tg); currentScreen = 'game'; show(); return; }
-  currentScreen = 'auth';
-  const langBtn = getLang() === 'en' ? 'EN' : 'RU';
-  document.getElementById('app').innerHTML = `
-    <div class="screen active auth-screen">
-      <div class="auth-particles" id="authParticles"></div>
-      <div class="topbar" style="background:transparent;position:absolute;top:0;right:0;z-index:10;">
-        <div class="topbar-right">
-          <button class="lang-toggle" onclick="W._toggleLang()">${langBtn}</button>
-        </div>
-      </div>
-      <div class="auth-illuminati">
-        <div class="auth-eye">
-          <div class="eye-outer">
-            <div class="eye-inner"></div>
-          </div>
-          <div class="eye-rays"></div>
-        </div>
-        <div class="eye-ring ring-1"></div>
-        <div class="eye-ring ring-2"></div>
-        <div class="eye-ring ring-3"></div>
-      </div>
-      <div class="auth-title">${t('welcome')}</div>
-      <div class="auth-sub">${t('authSub')}</div>
-      <button class="auth-btn auth-wallet" onclick="W._authWallet()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-        ${t('connectWallet')}
       </button>
-      <button class="auth-btn auth-tg" onclick="W._tg()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
-        ${t('openTg')}
-      </button>
-      <button class="auth-btn auth-skip" onclick="W._skip()">${t('skip')}</button>
-      <div class="auth-link"><a href="${SUPPORT_URL}" target="_blank">${t('help')}</a></div>
-    </div>`;
-  initAuthParticles();
-}
-
-function showGame() {
-  const s = store.state;
-  const world = WORLDS[s.currentWorld];
-  const income = store.calcIncomePerSec();
-  const twActive = s.timeWarpActive && Date.now() < s.timeWarpEnd;
-  const twLeft = twActive ? Math.ceil((s.timeWarpEnd - Date.now()) / 1000) : 0;
-  const ownedClones = world.clones.filter(c => (s.cloneCounts[c.id] || 0) > 0);
-
-  const adActive2x = store.isAdBoostActive('ad_2x_income');
-  const adActive3x = store.isAdBoostActive('ad_3x_income');
-  const adActiveSpeed = store.isAdBoostActive('ad_speed');
-
-  const costumeSprite = getCostumeSprite();
-  const xpNeeded = store.getIllumineusXpNeeded();
-  const xpPercent = Math.floor((s.illuminatiXp / xpNeeded) * 100);
-
-  document.getElementById('app').innerHTML = `
-    <div class="screen active">
-      ${topbarHTML(world.name, world.color)}
-
-      <div class="game-scene" id="gameScene">
-        <div class="scene-bg" style="background:radial-gradient(ellipse at 50% 60%, ${world.color}22 0%, #060610 70%)"></div>
-        <div class="scene-overlay" style="--wc:${world.color}"></div>
-
-        <div class="illuminati-level">
-          <span class="ili-level">Lvl ${s.illuminatiLevel}</span>
-          <div class="ili-xp-bar"><div class="ili-xp-fill" style="width:${xpPercent}%"></div></div>
-        </div>
-
-        <div class="illuminatus-container" id="illuminatusTap">
-          <img src="${costumeSprite}" class="illuminatus-sprite" alt="Illumineus">
-          <div class="illuminatus-glow" style="--wc:${world.color}"></div>
-          <div class="tap-ring"></div>
-          ${adActive2x ? '<div class="boost-badge">2x</div>' : ''}
-          ${adActive3x ? '<div class="boost-badge boost-3x">3x</div>' : ''}
-          ${adActiveSpeed ? '<div class="boost-badge boost-speed">⚡</div>' : ''}
-        </div>
-
-        <div class="scene-clones" id="sceneClones">
-          ${ownedClones.slice(0, 8).map((c, i) => {
-            const count = s.cloneCounts[c.id] || 0;
-            const portrait = './assets/illuminati/sprites/' + c.portrait + '.png';
-            const positions = [
-              {left:'5%',bottom:'8%'}, {left:'18%',bottom:'12%'}, {left:'32%',bottom:'6%'},
-              {left:'46%',bottom:'10%'}, {left:'60%',bottom:'5%'}, {left:'74%',bottom:'11%'},
-              {left:'12%',bottom:'22%'}, {left:'38%',bottom:'25%'}
-            ];
-            const pos = positions[i] || positions[0];
-            return `<div class="scene-clone" style="left:${pos.left};bottom:${pos.bottom};animation-delay:${i*0.2}s">
-              <img src="${portrait}" class="clone-portrait" alt="${getLang()==='ru'?c.nameRu:c.name}">
-              <div class="clone-count-badge">x${count}</div>
-              <div class="clone-name-tag">${getLang()==='ru'?c.nameRu:c.name}</div>
-            </div>`;
-          }).join('')}
-        </div>
-
-        ${twActive ? `<div class="time-warp-bar">⏰ TIME WARP x2 — ${twLeft}s</div>` : ''}
-
-        <div class="scene-stats">
-          <div class="stat-pill"><span class="stat-label">${t('income')}</span><span class="stat-val">${fmt(income)}/s</span></div>
-          <div class="stat-pill"><span class="stat-label">${t('total')}</span><span class="stat-val">${fmt(s.totalApeEarned)}</span></div>
-          <div class="stat-pill"><span class="stat-label">${t('clones')}</span><span class="stat-val">${ownedClones.length}/${world.clones.length}</span></div>
-        </div>
-
-        ${s.questActive && !s.questCompleted ? `
-          <div class="quest-progress-bar">
-            <div class="quest-progress-label">${t('questInProgress')}</div>
-            <div class="quest-progress-track">
-              <div class="quest-progress-fill" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div>
-            </div>
-            <div class="quest-progress-time">${Math.ceil(store.getQuestTimeLeft()/1000)}s</div>
-          </div>
-        ` : ''}
-        ${s.questCompleted ? `
-          <div class="quest-complete-btn" onclick="W._collectScrolls()">
-            <div class="quest-complete-glow"></div>
-            <span>📜 ${t('questCollect')}</span>
-          </div>
-        ` : ''}
-        <div class="quest-fab" id="questFab" onclick="W._nav('scrolls')">
-          <span class="quest-fab-icon">📜</span>
-        </div>
-        <div class="mason-fab" id="masonFab" onclick="W._feedMason()">
-          <span class="mason-fab-icon">⬡</span>
-          <div class="mason-fab-label">${t('feedMason')}</div>
-        </div>
-        <div class="roulette-fab" id="rouletteFab" onclick="W._openRoulette()">
-          <span class="roulette-fab-icon">🎰</span>
-        </div>
-      </div>
-
-      <div class="world-tabs" id="worldTabs">
-        ${WORLDS.map((w, i) => {
-          const unlocked = s.unlockedWorlds.includes(i);
-          const active = s.currentWorld === i;
-          const wName = getLang() === 'ru' ? (w.nameRu || w.name) : w.name;
-          return `<button class="world-tab ${active?'active':''} ${!unlocked?'locked':''}"
-            style="--wc:${w.color}"
-            onclick="${unlocked ? `W._switchWorld(${i})` : `W._unlockWorld(${i})`}"
-            ${!unlocked && s.apeBalance < w.unlockCost ? 'disabled' : ''}>
-            <span class="wt-name">${wName}</span>
-            ${!unlocked ? `<span class="wt-cost">${fmt(w.unlockCost)} A</span>` : ''}
-          </button>`;
-        }).join('')}
-      </div>
-
-      ${navHTML('game')}
-    </div>`;
-
-  document.getElementById('illuminatusTap').addEventListener('pointerdown', onTap, { passive: false });
-  initSwipe();
-}
-
-function showClones() {
-  const s = store.state;
-  const world = WORLDS[s.currentWorld];
-  const wName = getLang() === 'ru' ? (world.nameRu || world.name) : world.name;
-
-  let html = `<div class="screen active">
-    ${topbarHTML(t('cloneTitle') + ' — ' + wName, world.color)}
-    <div class="scroll">
-      <div class="section-header-img">
-        <img src="${ICONS.clonesCommon}" class="section-header-icon" alt="">
-        <span>${t('cloneSubtitle')}</span>
-      </div>
-      ${world.clones.map(c => {
-        const count = s.cloneCounts[c.id] || 0;
-        const cost = store.getCloneCost(c);
-        const canBuy = s.apeBalance >= cost;
-        const hasMgr = s.managerOwned[c.id + '_mgr'];
-        const portrait = './assets/illuminati/sprites/' + c.portrait + '.png';
-        const upgradeCost = store.getCloneUpgradeCost(c.id);
-        const canUpgrade = s.apeBalance >= upgradeCost;
-        const cName = getLang() === 'ru' ? (c.nameRu || c.name) : c.name;
-        return `<div class="clone-card ${canBuy ? 'affordable' : ''}">
-          <img src="${portrait}" class="clone-icon-portrait" alt="${cName}">
-          <div class="clone-info">
-            <h4>${cName} ${hasMgr ? '<span class="mgr-badge">' + t('auto') + '</span>' : ''}</h4>
-            <p class="clone-rate">${fmt(c.baseRate)} $APE/s</p>
-            <p class="clone-owned">${t('owned')}: ${count}</p>
-            ${getStarDisplay(c.id)}
-          </div>
-          <div class="clone-actions">
-            <button class="btn-buy btn-sm ${canBuy?'':'btn-disabled'}" onclick="W._buyClone('${c.id}')" ${canBuy?'':'disabled'}>
-              <img src="${ICONS.buttonGreenMoney}" class="btn-icon" alt=""> ${fmt(cost)} A
-            </button>
-            ${count > 0 ? `<button class="btn-upgrade btn-sm ${canUpgrade?'':'btn-disabled'}" onclick="W._upgradeClone('${c.id}')" ${canUpgrade?'':'disabled'}>
-              <img src="${ICONS.buttonGreen}" class="btn-icon" alt=""> ${fmt(upgradeCost)} A
-            </button>` : ''}
-          </div>
-        </div>`;
-      }).join('')}
-
-      <div class="section-header-img" style="margin-top:16px">
-        <img src="${ICONS.managers}" class="section-header-icon" alt="">
-        <span>${t('managersTitle')}</span>
-      </div>
-      ${world.managers.map(m => {
-        const owned = s.managerOwned[m.id];
-        const portrait = '/assets/illuminati/sprites/' + m.portrait + '.png';
-        const mName = getLang() === 'ru' ? (m.nameRu || m.name) : m.name;
-        return `<div class="manager-card ${owned ? 'owned' : ''}">
-          <img src="${portrait}" class="mgr-portrait" alt="${mName}">
-          <div class="mgr-info">
-            <h4>${mName}</h4>
-            <p>${fmt(m.baseCost)} $APE</p>
-          </div>
-          <button class="${owned?'btn-owned':'btn-buy'}" onclick="W._buyManager('${m.id}')" ${owned?'disabled':''}>
-            ${owned?t('hired'):t('hire')}
-          </button>
-        </div>`;
-      }).join('')}
-    </div>
-    ${navHTML('clones')}
+    `).join('')}
   </div>`;
-  document.getElementById('app').innerHTML = html;
 }
 
-function showAds() {
-  const s = store.state;
-
-  let html = `<div class="screen active">
-    ${topbarHTML(t('boostTitle'), '#f7c948')}
-    <div class="scroll">
-      <div class="section-header-img">
-        <img src="${ICONS.videoAd}" class="section-header-icon" alt="">
-        <span>${t('boostSub')}</span>
-      </div>
-      ${AD_BOOSTS.map(b => {
-        const canWatch = store.canWatchAd(b.id);
-        const isActive = store.isAdBoostActive(b.id);
-        const cooldownLeft = store.getAdCooldownLeft(b.id);
-        const cooldownMin = Math.ceil(cooldownLeft / 60000);
-        const bName = getLang() === 'ru' ? (b.nameRu || b.name) : b.name;
-        const bDesc = getLang() === 'ru'
-          ? (b.id === 'ad_2x_income' ? 'Двойной доход на 60с' : b.id === 'ad_3x_income' ? 'Тройной доход на 30с' : b.id === 'ad_speed' ? 'Менеджеры x2 на 60с' : b.id === 'ad_free_clone' ? 'Получи случайного клона бесплатно' : b.id === 'ad_diamonds' ? 'Получи 5 алмазов' : 'x2 всё на 120с')
-          : b.desc;
-        return `<div class="ad-card ${isActive ? 'active' : ''}">
-          <img src="${b.icon}" class="ad-icon" alt="${bName}">
-          <div class="ad-info">
-            <h4>${bName}</h4>
-            <p>${bDesc}</p>
-            ${isActive ? '<p class="ad-active-text">' + t('active') + '</p>' : ''}
-            ${!canWatch && !isActive ? `<p class="ad-cooldown">${t('readyIn')} ${cooldownMin}m</p>` : ''}
-          </div>
-          <button class="btn-ad ${canWatch && !isActive ? '' : 'btn-disabled'}" onclick="W._watchAd('${b.id}')" ${canWatch && !isActive ? '' : 'disabled'}>
-            <img src="${ICONS.videoAd}" class="btn-icon" alt=""> ${t('watch')}
-          </button>
-        </div>`;
-      }).join('')}
-
-      <div class="section-header-img" style="margin-top:16px">
-        <img src="${ICONS.clonesEpic}" class="section-header-icon" alt="">
-        <span>${t('costumeTitle')}</span>
-      </div>
-      <div class="costume-grid">
-        ${COSTUMES.map(c => {
-          const unlocked = s.unlockedCostumes.includes(c.id);
-          const equipped = s.activeCostume === c.id;
-          const level = s.costumeLevel[c.id] || 1;
-          const cName = getLang() === 'ru' ? (c.nameRu || c.name) : c.name;
-          return `<div class="costume-card ${equipped ? 'equipped' : ''} ${!unlocked ? 'locked' : ''}">
-            <img src="${c.sprite}" class="costume-thumb" alt="${cName}">
-            <div class="costume-name">${cName}</div>
-            <div class="costume-bonus">x${c.bonus} + ${(level-1)*5}%</div>
-            ${unlocked ? `
-              <div class="costume-level">${t('level')} ${level}</div>
-              ${equipped ? '<div class="costume-equipped">' + t('equipped') + '</div>' : `<button class="btn-sm btn-buy" onclick="W._equipCostume('${c.id}')"><img src="${ICONS.buttonGreen}" class="btn-icon" alt=""> ${t('equip')}</button>`}
-              ${level < 10 ? `<button class="btn-sm btn-upgrade" onclick="W._upgradeCostume('${c.id}')">⬆ ${fmt(Math.floor(100 * Math.pow(2, level)))} <img src="${ICONS.diamond}" class="btn-icon" alt=""></button>` : ''}
-            ` : `<button class="btn-sm btn-buy" onclick="W._buyCostume('${c.id}')"><img src="${ICONS.diamond}" class="btn-icon" alt=""> ${c.cost}</button>`}
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-    ${navHTML('ads')}
-  </div>`;
-  document.getElementById('app').innerHTML = html;
-}
-
-function showUpgrades() {
-  const s = store.state;
-  const world = WORLDS[s.currentWorld];
-  const wName = getLang() === 'ru' ? (world.nameRu || world.name) : world.name;
-
-  function renderUpgradeCard(u) {
-    const lv = s.upgradeLevels[u.id] || 0;
-    const cost = u.oneTime ? u.baseCost : store.getUpgradeCost(u);
-    const canBuy = s.apeBalance >= cost && (u.maxLevel === 0 || lv < u.maxLevel);
-    const uName = getLang() === 'ru' ? (u.nameRu || u.name) : u.name;
-    const uDesc = getLang() === 'ru'
-      ? (u.id.includes('w1u') ? (u.desc.replace('x2','x2').replace('+50%','+50%').replace('All W1','Все W1')) : u.desc)
-      : u.desc;
-    const iconSrc = u.icon || ICONS.upgrades;
-    return `<div class="up-card">
-      <img src="${iconSrc}" class="up-icon-img" alt="">
-      <div class="up-info"><h4>${uName}</h4><p>${uDesc}</p></div>
-      <div class="up-meta">
-        <span class="up-level">${u.oneTime ? (lv > 0 ? t('activeLabel') : t('once')) : lv + '/' + u.maxLevel}</span>
-        <button class="btn-sm ${canBuy?'btn-buy':'btn-disabled'}" onclick="W._buyWorldUp('${u.id}')" ${canBuy?'':'disabled'}>
-          ${u.maxLevel > 0 && lv >= u.maxLevel ? t('max') : fmt(cost)+' A'}
-        </button>
-      </div>
-    </div>`;
-  }
-
-  let html = `<div class="screen active">
-    ${topbarHTML(t('upgradeTitle') + ' — ' + wName, world.color)}
-    <div class="scroll">
-      <div class="section-header-img">
-        <img src="${ICONS.upgrades}" class="section-header-icon" alt="">
-        <span>${t('worldUpgrades')}</span>
-      </div>
-      ${world.upgrades.map(renderUpgradeCard).join('')}
-
-      <div class="section-header-img" style="margin-top:16px">
-        <img src="${ICONS.eye2}" class="section-header-icon" alt="">
-        <span>${t('tapUpgrades')}</span>
-      </div>
-      ${TAP_UPGRADES.map(u => {
-        const lv = s.upgradeLevels[u.id] || 0;
-        const cost = u.oneTime ? u.baseCost : store.getUpgradeCost(u);
-        const canBuy = s.apeBalance >= cost && (u.maxLevel === 0 || lv < u.maxLevel);
-        const uName = getLang() === 'ru' ? (u.nameRu || u.name) : u.name;
-        const uDesc = u.desc;
-        return `<div class="up-card">
-          <img src="${u.icon}" class="up-icon-img" alt="">
-          <div class="up-info"><h4>${uName}</h4><p>${uDesc}</p></div>
-          <div class="up-meta">
-            <span class="up-level">${u.oneTime ? (lv > 0 ? t('activeLabel') : t('once')) : lv + '/' + u.maxLevel}</span>
-            <button class="btn-sm ${canBuy?'btn-buy':'btn-disabled'}" onclick="W._buyTapUp('${u.id}')" ${canBuy?'':'disabled'}>
-              ${u.maxLevel > 0 && lv >= u.maxLevel ? t('max') : fmt(cost)+' A'}
-            </button>
-          </div>
-        </div>`;
-      }).join('')}
-
-      <div class="section-header-img" style="margin-top:16px">
-        <img src="${ICONS.eye3}" class="section-header-icon" alt="">
-        <span>${t('globalUpgrades')}</span>
-      </div>
-      ${GLOBAL_UPGRADES.map(u => {
-        const lv = s.upgradeLevels[u.id] || 0;
-        const cost = u.oneTime ? u.baseCost : store.getUpgradeCost(u);
-        const canBuy = s.apeBalance >= cost && (u.maxLevel === 0 || lv < u.maxLevel);
-        const uName = getLang() === 'ru' ? (u.nameRu || u.name) : u.name;
-        return `<div class="up-card">
-          <img src="${u.icon}" class="up-icon-img" alt="">
-          <div class="up-info"><h4>${uName}</h4><p>${u.desc}</p></div>
-          <div class="up-meta">
-            <span class="up-level">${u.oneTime ? (lv > 0 ? t('activeLabel') : t('once')) : lv + '/' + u.maxLevel}</span>
-            <button class="btn-sm ${canBuy?'btn-buy':'btn-disabled'}" onclick="W._buyGlobalUp('${u.id}')" ${canBuy?'':'disabled'}>
-              ${u.maxLevel > 0 && lv >= u.maxLevel ? t('max') : fmt(cost)+' A'}
-            </button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-    ${navHTML('upgrades')}
-  </div>`;
-  document.getElementById('app').innerHTML = html;
-}
-
-function showWallet() {
-  const s = store.state;
-  const addr = s.walletAddress;
-  let html = `<div class="screen active">
-    ${topbarHTML(t('walletTitle'), '#f7c948')}
-    <div class="scroll">
-      <div class="section-header-img">
-        <img src="${ICONS.diamond}" class="section-header-icon" alt="">
-        <span>$APE Token</span>
-      </div>
-      <div class="wallet-card">
-        <div class="wallet-balance">${fmt(s.apeBalance)}</div>
-        <div class="wallet-sub">${t('totalEarned')}: ${fmt(s.totalApeEarned)} $APE</div>
-      </div>
-      ${addr ? `
-        <div class="wallet-info"><p>${t('connected')}: <span>${addr.slice(0,8)}...${addr.slice(-6)}</span></p></div>
-        <button class="btn-lg btn-primary" onclick="W._buyApe()"><img src="${ICONS.buttonBigGreen}" class="btn-icon" alt=""> ${t('buyApe')}</button>
-        <button class="btn-lg btn-ghost" onclick="W._sellApe()"><img src="${ICONS.buttonBigPurple}" class="btn-icon" alt=""> ${t('sellApe')}</button>
-      ` : `
-        <div class="wallet-info" style="text-align:center;padding:24px">
-          <p style="margin-bottom:14px">${t('walletSub')}</p>
-          <button class="auth-btn auth-ton" onclick="W._connect()" style="margin:0 auto">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L19.18 8 12 11.82 4.82 8 12 4.18zM4 9.64l7 3.5V19.5l-7-3.5V9.64zm9 9.86v-6.36l7-3.5v6.36l-7 3.5z"/></svg>
-            ${t('connect')}
-          </button>
-        </div>
-      `}
-      <div class="wallet-info">
-        <p>🔗 ${t('contract')}: <span>EQBjoywW...zUD</span></p>
-        <p>💱 ${t('rate')}: <span>1 GRAM = 15,674 $APE</span></p>
-        <p>💬 ${t('support')}: <span><a href="${SUPPORT_URL}" style="color:#f7c948" target="_blank">@Superadminist</a></span></p>
-      </div>
-    </div>
-    ${navHTML('wallet')}
-  </div>`;
-  document.getElementById('app').innerHTML = html;
-}
-
-function showMasons() {
-  const s = store.state;
-  const masonCost = store.getMasonCost();
-  const canBuyMason = store.canBuyMason() && s.apeBalance >= masonCost;
-  const masonUnlocked = store.canBuyMason();
-  const masonBonus = store.getMasonBonus();
-  const remaining = MASON_CONFIG.totalSupply - s.masonCount;
-  const starsBalance = s.totalStars;
-
-  let html = `<div class="screen active">
-    ${topbarHTML(t('masonsTitle'), '#f7c948')}
-    <div class="scroll">
-      <div class="mason-counter">
-        <div class="mason-supply">${remaining}</div>
-        <div class="mason-total">${t('remaining')} / ${MASON_CONFIG.totalSupply} ${t('legendary')}</div>
-        <div class="mason-bonus">${t('masonBonus')}: x${masonBonus.toFixed(1)}</div>
-        <div class="mason-tokens">
-          ${Array.from({length: Math.min(s.masonCount, 200)}, () => '<div class="mason-token owned"></div>').join('')}
-          ${Array.from({length: Math.min(remaining, 200 - s.masonCount)}, () => '<div class="mason-token"></div>').join('')}
-        </div>
-      </div>
-
-      ${masonUnlocked ? `
-        <button class="btn-lg btn-primary" onclick="W._buyMason()" ${canBuyMason ? '' : 'disabled'} style="${canBuyMason ? '' : 'opacity:0.4;cursor:not-allowed;'}">
-          ${t('masonBuy')} — ${fmt(masonCost)} $APE
-        </button>
-      ` : `
-        <div class="mason-presale">
-          <h4>${t('masonLocked')}</h4>
-          <p>${t('masonUnlock')}: ${WORLDS[MASON_CONFIG.unlockWorld]?.name || 'World ' + (MASON_CONFIG.unlockWorld+1)}</p>
-        </div>
-      `}
-
-      <div class="section-header-img" style="margin-top:16px">
-        <img src="${ICONS.goldStar}" class="section-header-icon" alt="">
-        <span>${t('starsShop')} (${starsBalance} ⭐)</span>
-      </div>
-      ${STARS_SHOP.map(item => {
-        const canAfford = starsBalance >= item.cost;
-        const isActive = store.isStarBoostActive(item.id);
-        const name = getLang() === 'ru' ? (item.nameRu || item.name) : item.name;
-        const desc = getLang() === 'ru' ? (item.descRu || item.desc) : item.desc;
-        return `<div class="star-shop-card ${isActive ? 'active' : ''}">
-          <img src="${item.icon}" class="star-shop-icon" alt="">
-          <div class="star-shop-info">
-            <h4>${name}</h4>
-            <p>${desc}</p>
-            ${isActive ? '<p class="ad-active-text">' + t('active') + '</p>' : ''}
-          </div>
-          <button class="btn-buy btn-sm ${canAfford && !isActive ? '' : 'btn-disabled'}"
-            onclick="W._buyStarBoost('${item.id}')" ${canAfford && !isActive ? '' : 'disabled'}>
-            ⭐ ${item.cost}
-          </button>
-        </div>`;
-      }).join('')}
-    </div>
-    ${navHTML('masons')}
-  </div>`;
-  document.getElementById('app').innerHTML = html;
-}
-
-function showScrolls() {
-  const s = store.state;
-  const cols = MERGE_FIELD_CONFIG.cols;
-  const rows = MERGE_FIELD_CONFIG.rows;
-  const questCost = s.questFeedCost;
-  const canFeed = s.apeBalance >= questCost && !s.questActive;
-  const scrollCount = s.scrollInventory.length;
-  const totalSlotValue = s.mergeField.reduce((sum, item, i) => item && store.isSlotUnlocked(i) ? sum + item.value : sum, 0);
-
-  let html = `<div class="screen active">
-    ${topbarHTML(t('scrollTitle'), '#10b981')}
-    <div class="scroll">
-      <div class="section-header-img">
-        <span>📜 ${t('questTitle')}</span>
-      </div>
-      <div class="quest-card">
-        <div class="quest-info">
-          <p>${t('questSub')}</p>
-          ${s.questActive && !s.questCompleted ? `
-            <div class="quest-progress-inline">
-              <div class="quest-progress-track"><div class="quest-progress-fill" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div></div>
-              <span class="quest-progress-timer">${Math.ceil(store.getQuestTimeLeft()/1000)}s</span>
-            </div>
-          ` : s.questCompleted ? `
-            <div class="quest-complete-large" onclick="W._collectScrolls()">
-              <span class="quest-collect-icon">📜</span>
-              <span>${t('questCollect')}</span>
-            </div>
-          ` : `
-            <button class="btn-lg btn-primary" onclick="W._startQuest()" ${canFeed ? '' : 'disabled'}
-              style="${canFeed ? '' : 'opacity:0.4;cursor:not-allowed;'}">
-              🍽 ${t('questFeed')} — ${fmt(questCost)} $APE
-            </button>
-          `}
-        </div>
-      </div>
-
-      <div class="section-header-img" style="margin-top:12px">
-        <span>📦 ${t('scrollInventory')} (${scrollCount})</span>
-      </div>
-      <div class="scroll-inventory">
-        ${scrollCount === 0 ? `<div class="empty-state">${t('scrollEmpty')}</div>` :
-          s.scrollInventory.slice(0, 30).map(sc => {
-            const st = SCROLL_TYPES.find(t => t.id === sc.type) || SCROLL_TYPES[0];
-            return `<div class="scroll-item" style="border-color:${st.color};background:${st.glow}08"
-              draggable="false"
-              onclick="W._placeScroll('${sc.id}')">
-              <div class="scroll-item-icon" style="color:${st.color}">📜</div>
-              <div class="scroll-item-info">
-                <div class="scroll-item-name" style="color:${st.color}">${st.name}</div>
-                <div class="scroll-item-value">${fmt(sc.value)}</div>
-              </div>
-            </div>`;
-          }).join('')}
-      </div>
-
-      <div class="section-header-img" style="margin-top:12px">
-        <span>🔮 ${t('mergeField')} <span style="font-size:10px;color:rgba(255,255,255,0.2);font-weight:400">(${s.mergeFieldUnlocked.length}/${MERGE_FIELD_CONFIG.maxSlots} • ${fmt(totalSlotValue)} A)</span></span>
-      </div>
-      <div class="merge-field-grid-7" id="mergeGrid">
-        ${Array.from({length: rows * cols}, (_, i) => {
-          const row = Math.floor(i / cols);
-          const col = i % cols;
-          const unlocked = store.isSlotUnlocked(i);
-          const item = s.mergeField[i];
-          const st = item ? (SCROLL_TYPES.find(t => t.id === item.type) || SCROLL_TYPES[0]) : null;
-          const isDrag = s.mergeDragSource === i;
-          const isCenter = row >= 2 && row <= 4 && col >= 2 && col <= 4;
-          const cost = unlocked ? 0 : store.getSlotUnlockCost(i);
-          const canBuy = !unlocked && s.apeBalance >= cost;
-          return `<div class="merge-slot-7 ${unlocked ? 'unlocked' : 'locked'} ${isDrag ? 'dragging' : ''} ${item ? 'filled' : 'empty'}"
-            data-index="${i}"
-            ${!unlocked ? `onclick="W._buyMergeSlot(${i})"` : ''}
-            ondragstart="W._dragStart(${i})" ondragover="event.preventDefault()" ondrop="W._dragDrop(${i})"
-            ontouchstart="W._touchStart(event, ${i})" ontouchend="W._touchEnd(event, ${i})"
-            style="${!unlocked && canBuy ? 'cursor:pointer' : ''}">
-            ${unlocked && item ? `
-              <div class="ms7-item" style="border-color:${st.color};background:${st.glow}15" draggable="true">
-                <div class="ms7-icon" style="color:${st.color}">📜</div>
-                <div class="ms7-label" style="color:${st.color}">${st.name.slice(0,8)}</div>
-                <div class="ms7-value">${fmt(item.value)}</div>
-              </div>
-            ` : unlocked && !item ? `
-              <div class="ms7-empty">+</div>
-            ` : `
-              <div class="ms7-locked">
-                <span class="ms7-lock-icon">🔒</span>
-                ${canBuy ? `<span class="ms7-cost">${fmt(cost)}</span>` : ''}
-              </div>
-            `}
-          </div>`;
-        }).join('')}
-      </div>
-      <button class="btn-lg btn-primary" onclick="W._redeemAll()" style="margin-top:10px" ${totalSlotValue === 0 ? 'disabled style="opacity:0.3"' : ''}>
-        💰 ${t('scrollRedeem')} ${totalSlotValue > 0 ? '— ' + fmt(totalSlotValue) + ' A' : ''}
-      </button>
-    </div>
-    ${navHTML('scrolls')}
-  </div>`;
-  document.getElementById('app').innerHTML = html;
-}
-
+/* ─── Show router ─── */
 function show() {
-  switch(currentScreen) {
-    case 'auth': showAuth(); break;
-    case 'game': showGame(); break;
-    case 'clones': showClones(); break;
-    case 'ads': showAds(); break;
-    case 'upgrades': showUpgrades(); break;
-    case 'masons': showMasons(); break;
-    case 'wallet': showWallet(); break;
-    case 'scrolls': showScrolls(); break;
-    case 'wardrobe': showWardrobe(); break;
-    case 'casino': showCasino(); break;
-    default: showAuth();
+  switch (currentScreen) {
+    case 'temple': showTemple(); break;
+    case 'collection': showCollection(); break;
+    case 'merge': showMerge(); break;
+    case 'npc': showNPCList(); break;
+    case 'inventory': showInventory(); break;
+    case 'npc_detail': showNPCDetail(); break;
+    default: showTemple();
   }
-  if (currentScreen !== 'auth' && currentScreen !== 'loading') {
-    renderTutorial();
-  }
+  renderTutorial();
+  updateTick();
 }
 
-/* ─── Tap Logic ─── */
-function onTap(e) {
-  e.preventDefault();
-  const rect = e.currentTarget.getBoundingClientRect();
-  const x = e.clientX || (rect.left + rect.width/2);
-  const y = e.clientY || (rect.top + rect.height/2);
-  const popup = store.tap(x, y);
-  spawnPopup(popup);
-  spawnFlash(x, y);
-  playTapEffect(x, y);
-  playTap();
-  animateIllumineus();
-  updateTopBar();
-  updateComboDisplay();
-}
-
-function spawnPopup({ income, isCrit, x, y }) {
-  const el = document.createElement('div');
-  el.className = 'dmg-float ' + (isCrit ? 'dmg-crit' : 'dmg-normal');
-  el.textContent = '+' + fmt(income) + (isCrit ? ' CRIT!' : '');
-  el.style.left = (x + (Math.random()*40-20)) + 'px';
-  el.style.top = (y - 10) + 'px';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 700);
-}
-
-function spawnFlash(x, y) {
-  const world = WORLDS[store.state.currentWorld];
-  const el = document.createElement('div');
-  el.className = 'tap-flash';
-  el.style.background = `radial-gradient(circle, ${world.color}44 0%, transparent 70%)`;
-  el.style.left = (x - 40) + 'px';
-  el.style.top = (y - 40) + 'px';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 250);
-}
-
-function animateIllumineus() {
-  const sprite = document.querySelector('.illuminatus-sprite');
-  if (sprite) {
-    sprite.classList.add('tapped');
-    setTimeout(() => sprite.classList.remove('tapped'), 150);
-  }
-}
-
-function updateTopBar() {
+/* ─── Temple ─── */
+function showTemple() {
   const s = store.state;
-  const bal = document.getElementById('topBal');
-  if (bal) bal.textContent = fmt(s.apeBalance);
-}
-
-/* ─── Swipe Logic ─── */
-let touchStartX = 0;
-let touchStartY = 0;
-let isSwiping = false;
-
-function initSwipe() {
-  const scene = document.getElementById('gameScene');
-  if (!scene) return;
-
-  scene.addEventListener('touchstart', (e) => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    isSwiping = false;
-  }, { passive: true });
-
-  scene.addEventListener('touchmove', (e) => {
-    if (!touchStartX) return;
-    const dx = e.touches[0].clientX - touchStartX;
-    const dy = e.touches[0].clientY - touchStartY;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20) {
-      isSwiping = true;
-    }
-  }, { passive: true });
-
-  scene.addEventListener('touchend', (e) => {
-    if (!isSwiping) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const s = store.state;
-    if (dx < -50 && s.currentWorld < WORLDS.length - 1) {
-      const nextWorld = s.currentWorld + 1;
-      if (s.unlockedWorlds.includes(nextWorld)) {
-        store.switchWorld(nextWorld);
-        show();
-      }
-    } else if (dx > 50 && s.currentWorld > 0) {
-      const prevWorld = s.currentWorld - 1;
-      if (s.unlockedWorlds.includes(prevWorld)) {
-        store.switchWorld(prevWorld);
-        show();
-      }
-    }
-    touchStartX = 0;
-    isSwiping = false;
-  }, { passive: true });
-}
-
-/* ─── Tutorial ─── */
-function renderTutorial() {
-  if (store.state.tutorialComplete) return;
-  const step = TUTORIAL_STEPS[store.state.tutorialStep];
-  if (!step) { store.completeTutorial(); return; }
-
-  const spriteMap = {
-    welcome: ILLUMINEUS.welcomeSprite,
-    base: ILLUMINEUS.warningSprite,
-    warning: ILLUMINEUS.warningSprite,
-    bright: ILLUMINEUS.endBrightSprite,
-  };
-  const sprite = spriteMap[step.sprite] || ILLUMINEUS.warningSprite;
-
-  let overlay = document.getElementById('tutorialOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'tutorialOverlay';
-    document.body.appendChild(overlay);
-  }
-
-  const isLastStep = step.textKey === 'tutDone';
-
-  overlay.innerHTML = `
-    <div class="tut-backdrop">
-      <div class="tut-content">
-        <img src="${sprite}" class="tut-illuminatus" alt="Illumineus">
-        <div class="tut-speech">${t(step.textKey)}</div>
-        <div class="tut-actions">
-          <button class="tut-skip" onclick="W._tutSkip()">${t('tutSkip')}</button>
-          <button class="tut-next" onclick="W._tutNext()">${isLastStep ? '✨' : t('tutNext')}</button>
+  const total = s.totalCollected;
+  const unique = Object.values(s.collection).filter(c => c > 0).length;
+  const xpPct = Math.floor((s.xp / s.xpNeeded) * 100);
+  document.getElementById('app').innerHTML = `
+    <div class="screen active temple-screen">
+      <div class="temple-bg">
+        <div class="temple-bg-layer" style="background:radial-gradient(ellipse at 50% 30%,rgba(16,185,129,0.02) 0%,transparent 70%);animation:float 6s infinite"></div>
+        <div class="temple-stars"></div>
+        <div class="temple-bg-layer" style="bottom:0;height:40%;background:linear-gradient(0deg,rgba(16,185,129,0.02),transparent);opacity:0.5"></div>
+      </div>
+      ${topbar(t('appName'))}
+      <div class="temple-content">
+        <div class="temple-header">
+          <div class="temple-eye"><div class="temple-eye-inner"></div></div>
+          <div class="temple-greeting">${t('nav_temple')}</div>
+          <div class="temple-sub">${t('collection_sub')}</div>
         </div>
+        <div class="xp-bar-wrap">
+          <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${xpPct}%"></div></div>
+          <div class="xp-bar-label"><span>${t('level')} ${s.level}</span><span>${fmt(s.xp)}/${fmt(s.xpNeeded)} ${t('xp')}</span></div>
+        </div>
+        <div class="temple-stats">
+          <div class="temple-stat">
+            <div class="temple-stat-value">${total}</div>
+            <div class="temple-stat-label">${t('total')}</div>
+          </div>
+          <div class="temple-stat">
+            <div class="temple-stat-value">${unique}</div>
+            <div class="temple-stat-label">${t('unique')}</div>
+          </div>
+          <div class="temple-stat">
+            <div class="temple-stat-value">${s.completedQuests}</div>
+            <div class="temple-stat-label">${t('quests_completed')}</div>
+          </div>
+          <div class="temple-stat">
+            <div class="temple-stat-value">${s.level}</div>
+            <div class="temple-stat-label">${t('level')}</div>
+          </div>
+        </div>
+        <div class="temple-actions">
+          <button class="temple-action" onclick="W._nav('collection')">
+            <div class="temple-action-icon">☰</div>
+            <div class="temple-action-label">${t('nav_collection')}</div>
+            <div class="hint">${unique}/135+</div>
+          </button>
+          <button class="temple-action" onclick="W._nav('merge')">
+            <div class="temple-action-icon">⬡</div>
+            <div class="temple-action-label">${t('nav_merge')}</div>
+          </button>
+          <button class="temple-action" onclick="W._nav('npc')">
+            <div class="temple-action-icon">◉</div>
+            <div class="temple-action-label">${t('nav_library')}</div>
+          </button>
+          <button class="temple-action" onclick="W._daily()">
+            <div class="temple-action-icon">◎</div>
+            <div class="temple-action-label">${t('daily_title')}</div>
+            <div class="hint">${t('daily_streak')} ${s.streak}</div>
+          </button>
+        </div>
+        ${s.questActive ? `<div class="quest-panel" style="margin-top:8px">
+          <div class="quest-panel-title">${t('quest_progress')}</div>
+          <div class="quest-panel-progress"><div class="quest-panel-fill" id="questFill" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div></div>
+        </div>` : ''}
       </div>
-      ${step.highlight ? `<div class="tut-highlight" data-target="${step.highlight}"></div>` : ''}
-    </div>
-  `;
+      ${bottomNav('temple')}
+    </div>`;
+}
 
-  if (step.highlight) {
-    requestAnimationFrame(() => {
-      const target = document.querySelector(step.highlight);
-      const highlight = overlay.querySelector('.tut-highlight');
-      if (target && highlight) {
-        const rect = target.getBoundingClientRect();
-        highlight.style.top = rect.top - 4 + 'px';
-        highlight.style.left = rect.left - 4 + 'px';
-        highlight.style.width = rect.width + 8 + 'px';
-        highlight.style.height = rect.height + 8 + 'px';
-        if (step.textKey === 'tutTap') {
-          let hand = overlay.querySelector('.hand-cursor');
-          if (!hand) {
-            hand = document.createElement('div');
-            hand.className = 'hand-cursor';
-            hand.innerHTML = '<div class="hand-icon">👆</div><div class="hand-msg">' + t('handTap') + '</div>';
-            overlay.appendChild(hand);
+/* ─── Collection ─── */
+function showCollection(catFilter) {
+  if (catFilter) currentCategory = catFilter;
+  const s = store.state;
+  const items = store.getAllItems();
+  const cats = ITEM_CATEGORIES;
+  const totalAll = items.length;
+  const unique = Object.values(s.collection).filter(c => c > 0).length;
+  const pct = Math.floor((unique / totalAll) * 100);
+
+  let filtered = items;
+  if (currentCategory) filtered = filtered.filter(i => i.category === currentCategory);
+
+  document.getElementById('app').innerHTML = `
+    <div class="screen active collection-screen">
+      ${topbar(t('collection_title'))}
+      <div class="coll-header">
+        <div class="coll-title">${t('collection_title')}</div>
+        <div class="coll-sub">${unique}/${totalAll} ${t('unique')}</div>
+      </div>
+      <div class="coll-progress-bar"><div class="coll-progress-fill" style="width:${pct}%"></div></div>
+      <div class="coll-tabs">
+        <button class="coll-tab ${!currentCategory ? 'active' : ''}" onclick="W._cat(null)">${t('total')}</button>
+        ${cats.map(c => {
+          const prog = store.getCategoryProgress(c.id);
+          return `<button class="coll-tab ${currentCategory === c.id ? 'active' : ''}" onclick="W._cat('${c.id}')">${c.icon} ${getLang()==='ru'?c.nameRu:c.name} (${prog.owned})</button>`;
+        }).join('')}
+      </div>
+      <div class="coll-grid">
+        ${filtered.map(item => {
+          const count = s.collection[item.id] || 0;
+          const owned = count > 0;
+          const rarityDef = RARITIES.find(r => r.id === item.rarity);
+          const catDef = ITEM_CATEGORIES.find(c => c.id === item.category);
+          return `<div class="coll-item ${owned ? 'owned' : ''} ${owned && rarityDef && rarityDef.bonus >= 10 ? 'highlight' : ''}" style="${owned && rarityDef ? `border-color:${rarityDef.color}22` : ''}" onclick="${!owned ? `W._showItem('${item.id}')` : ''}">
+            <div class="coll-item-icon">${catDef ? catDef.icon : '?'}</div>
+            <div class="coll-item-name" style="${owned && rarityDef ? `color:${rarityDef.color}44` : ''}">${getLang()==='ru'?item.nameRu:item.name}</div>
+            ${owned ? `<div class="coll-item-count">${count}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${bottomNav('collection')}
+    </div>`;
+}
+
+/* ─── Merge ─── */
+function showMerge() {
+  const s = store.state;
+  const filled = s.mergeSlots.filter(sl => sl !== null).length;
+  const canMerge = filled >= 2;
+  const allSame = filled >= 2 && s.mergeSlots.filter(sl => sl !== null).every(sl => sl.rarity === s.mergeSlots.find(sl2 => sl2 !== null)?.rarity);
+  const mergeEnabled = canMerge && allSame;
+
+  document.getElementById('app').innerHTML = `
+    <div class="screen active merge-screen">
+      ${topbar(t('merge_title'))}
+      <div class="merge-header">
+        <div class="merge-title">${t('merge_title')}</div>
+        <div class="merge-sub">${t('merge_sub')}</div>
+      </div>
+      <div class="merge-grid">
+        ${s.mergeSlots.map((slot, i) => {
+          const unlocked = s.mergeSlotsUnlocked.includes(i);
+          const isFilled = slot !== null;
+          const rarityDef = isFilled ? RARITIES.find(r => r.id === slot.rarity) : null;
+          const catDef = isFilled ? ITEM_CATEGORIES.find(c => c.id === slot.category) : null;
+          if (!unlocked) {
+            const cost = MERGE_COST.common * (i + 1);
+            return `<div class="merge-slot locked" onclick="W._unlockSlot(${i})">
+              <div class="merge-slot-lock">🔒</div>
+              <div class="merge-slot-cost">${cost}●</div>
+            </div>`;
           }
-          hand.style.left = (rect.left + rect.width / 2 - 16) + 'px';
-          hand.style.top = (rect.top + rect.height + 10) + 'px';
-        } else {
-          const existingHand = overlay.querySelector('.hand-cursor');
-          if (existingHand) existingHand.remove();
-        }
-      }
-    });
-  }
-}
-
-/* ─── Sprite Animation System ─── */
-const spriteAnimations = {};
-
-function startSpriteAnimation(elementId, frames, fps) {
-  stopSpriteAnimation(elementId);
-  let frame = 0;
-  const el = document.getElementById(elementId);
-  if (!el || !frames || frames.length === 0) return;
-  el.src = frames[0];
-  spriteAnimations[elementId] = setInterval(() => {
-    frame = (frame + 1) % frames.length;
-    if (el) el.src = frames[frame];
-  }, 1000 / fps);
-}
-
-function stopSpriteAnimation(elementId) {
-  if (spriteAnimations[elementId]) {
-    clearInterval(spriteAnimations[elementId]);
-    delete spriteAnimations[elementId];
-  }
-}
-
-function playTapEffect(x, y) {
-  const frames = ANIMATIONS?.effects || [];
-  if (frames.length === 0) return;
-  const img = document.createElement('img');
-  img.className = 'tap-effect-sprite';
-  img.src = frames[0];
-  img.style.left = (x - 40) + 'px';
-  img.style.top = (y - 40) + 'px';
-  document.body.appendChild(img);
-  let f = 0;
-  const iv = setInterval(() => {
-    f++;
-    if (f >= frames.length) { clearInterval(iv); img.remove(); return; }
-    img.src = frames[f];
-  }, 80);
-}
-
-/* ─── Game loop ─── */
-let tickTimer = null;
-let autoTimer = null;
-let renderTimer = null;
-
-function startGameLoop() {
-  stopGameLoop();
-  tickTimer = setInterval(() => {
-    store.tick();
-    if (store.state.questActive && !store.state.questCompleted) {
-      const completed = store.tickQuest();
-      if (completed && currentScreen === 'game') showGame();
-    }
-  }, 500);
-  autoTimer = setInterval(() => {
-    if (currentScreen !== 'game') return;
-    const d = store.autoClick();
-    if (d > 0) updateTopBar();
-  }, 1000);
-  renderTimer = setInterval(() => {
-    if (currentScreen === 'game') showGame();
-  }, 5000);
-}
-
-function stopGameLoop() {
-  if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
-  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-  if (renderTimer) { clearInterval(renderTimer); renderTimer = null; }
-}
-
-/* ─── Global Handlers ─── */
-window.W = {};
-window.W._nav = (s) => { currentScreen = s; show(); if (s === 'game') startGameLoop(); else stopGameLoop(); showDailyBonus(); };
-window.W._tg = () => { const u = initTelegram(); if (u) { store.setTgUser(u); currentScreen='game'; show(); startGameLoop(); playClick(); } };
-window.W._skip = () => { store.setDemoMode(); currentScreen = 'game'; show(); startGameLoop(); playClick(); showDailyBonus(); };
-window.W._authWallet = async () => { await store.initFirebaseUser(); currentScreen = 'game'; show(); startGameLoop(); playClick(); showDailyBonus(); };
-window.W._switchWorld = (i) => { store.switchWorld(i); show(); playClick(); };
-window.W._unlockWorld = (i) => { if (store.unlockWorld(i)) { show(); playBuy(); } };
-window.W._buyClone = (id) => { if (store.buyClone(id)) { showClones(); playBuy(); } };
-window.W._upgradeClone = (id) => { if (store.upgradeClone(id)) { showClones(); playBuy(); } };
-window.W._buyManager = (id) => { if (store.buyManager(id)) { showClones(); playBuy(); } };
-window.W._buyWorldUp = (id) => { if (store.buyWorldUpgrade(id)) { showUpgrades(); playBuy(); } };
-window.W._buyTapUp = (id) => { if (store.buyTapUpgrade(id)) { showUpgrades(); playBuy(); } };
-window.W._buyGlobalUp = (id) => { if (store.buyGlobalUpgrade(id)) { showUpgrades(); playBuy(); } };
-window.W._watchAd = (id) => { if (store.watchAd(id)) { showAds(); playWin(); } };
-window.W._buyCostume = (id) => { if (store.buyCostume(id)) { showAds(); playBuy(); } };
-window.W._equipCostume = (id) => { if (store.equipCostume(id)) { showAds(); playClick(); } };
-window.W._upgradeCostume = (id) => { if (store.upgradeCostume(id)) { showAds(); playBuy(); } };
-window.W._buyMason = () => { if (store.buyMason()) { showMasons(); playBuy(); } };
-window.W._buyStarBoost = (id) => { if (store.buyStarBoost(id)) { showMasons(); playStar(); } };
-window.W._connect = async () => { const a = await connectWallet(); if(a) { store.setWallet(a); playBuy(); showWallet(); } };
-window.W._buyApe = async () => { const amt = prompt(t('enterTon')); if(amt) { await buyApe(parseFloat(amt)); showWallet(); playBuy(); } };
-window.W._sellApe = async () => { const amt = prompt(t('enterApe')); if(amt) { await sellApe(parseInt(amt)); showWallet(); playWin(); } };
-window.W._tutNext = () => { store.advanceTutorial(); if (store.state.tutorialStep >= TUTORIAL_STEPS.length) { store.completeTutorial(); document.getElementById('tutorialOverlay')?.remove(); } else { renderTutorial(); } };
-window.W._tutSkip = () => { store.completeTutorial(); document.getElementById('tutorialOverlay')?.remove(); };
-window.W._toggleLang = () => { const next = getLang() === 'en' ? 'ru' : 'en'; setLang(next); show(); };
-window.W._openRoulette = () => { showRouletteOverlay(); playClick(); };
-window.W._closeRoulette = () => { const el = document.getElementById('rouletteOverlay'); if (el) el.remove(); };
-window.W._spinRoulette = () => { playRouletteSpin(); spinRoulette(); };
-window.W._claimDaily = () => { const r = store.claimDailyBonus(); if (r) { playDailyBonus(); W._closeDaily(); show(); } };
-window.W._closeDaily = () => { const el = document.getElementById('dailyOverlay'); if (el) el.remove(); };
-
-/* ─── Quest / Scroll / Merge Handlers ─── */
-window.W._startQuest = () => {
-  if (store.startQuest()) { playBuy(); showScrolls(); }
-};
-window.W._collectScrolls = () => {
-  const result = store.collectQuestScrolls();
-  if (result.scrolls.length > 0) { playWin(); }
-  if (result.outfitDrop && !result.outfitDrop.duplicate) {
-    // Show outfit notification
-    showOutfitNotification(result.outfitDrop);
-  }
-  show();
-};
-window.W._placeScroll = (scrollId) => {
-  const slot = store.state.mergeField.findIndex((item, i) => !item && store.isSlotUnlocked(i));
-  if (slot === -1) return;
-  const scroll = store.state.scrollInventory.find(s => s.id === scrollId);
-  if (!scroll) return;
-  store.state.mergeField[slot] = { ...scroll };
-  store.state.scrollInventory = store.state.scrollInventory.filter(s => s.id !== scrollId);
-  store.save();
-  playClick();
-  showScrolls();
-};
-// Drag-drop (mouse)
-window.W._dragStart = (idx) => {
-  const item = store.mergeFieldSetDrag(idx);
-  if (!item) return;
-  document.querySelectorAll('.merge-slot-7').forEach(el => el.classList.toggle('drag-over', false));
-  const target = document.querySelector(`.merge-slot-7[data-index="${idx}"]`);
-  if (target) target.classList.add('dragging');
-};
-window.W._dragDrop = (idx) => {
-  if (store.state.mergeDragSource === null) return;
-  const result = store.mergeFieldDrop(idx);
-  store.save();
-  if (result.merged) playWin();
-  else playClick();
-  showScrolls();
-};
-// Drag-drop (touch)
-let _touchDragIdx = null;
-window.W._touchStart = (ev, idx) => {
-  if (!store.isSlotUnlocked(idx) || !store.state.mergeField[idx]) return;
-  _touchDragIdx = idx;
-};
-window.W._touchEnd = (ev, idx) => {
-  const src = _touchDragIdx;
-  _touchDragIdx = null;
-  if (src === null || src === idx) return;
-  if (!store.isSlotUnlocked(idx)) {
-    // Try to unlock this slot
-    W._buyMergeSlot(idx);
-    return;
-  }
-  store.mergeFieldSetDrag(src);
-  const result = store.mergeFieldDrop(idx);
-  store.save();
-  if (result.merged) playWin();
-  else if (result.moved || result.swapped) playClick();
-  showScrolls();
-};
-window.W._buyMergeSlot = (idx) => {
-  if (store.isSlotUnlocked(idx)) return;
-  if (store.unlockSlot(idx)) {
-    playBuy();
-    showScrolls();
-  }
-};
-window.W._redeemAll = () => {
-  const total = store.redeemAllScrolls();
-  if (total > 0) { playWin(); showScrolls(); }
-};
-
-/* ─── Roulette ─── */
-function showRouletteOverlay() {
-  const cost = store.getRouletteCost();
-  const canSpin = store.state.apeBalance >= cost;
-
-  let overlay = document.getElementById('rouletteOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'rouletteOverlay';
-    document.body.appendChild(overlay);
-  }
-
-  overlay.innerHTML = `
-    <div class="roulette-overlay" onclick="if(event.target===this)W._closeRoulette()">
-      <div class="roulette-panel" style="position:relative">
-        <button class="roulette-close" onclick="W._closeRoulette()">&times;</button>
-        <div class="roulette-title">${t('rouletteTitle')}</div>
-        <div class="roulette-pointer"></div>
-        <div class="roulette-wheel" id="rouletteWheel"></div>
-        <div class="roulette-result" id="rouletteResult"></div>
-        <div class="roulette-cost-label">${t('rouletteCost')}: <span>${fmt(cost)} $APE</span></div>
-        <button class="roulette-spin-btn" id="rouletteSpinBtn" onclick="W._spinRoulette()" ${canSpin ? '' : 'disabled'}>
-          🎰 ${t('rouletteSpin')}
-        </button>
+          if (!isFilled) {
+            return `<div class="merge-slot" onclick="W._addToSlot(${i})">
+              <div class="merge-slot-icon">+</div>
+            </div>`;
+          }
+          return `<div class="merge-slot filled" style="border-color:${rarityDef ? rarityDef.color + '22' : ''}" onclick="W._removeSlot(${i})">
+            <div class="merge-slot-icon">${catDef ? catDef.icon : '?'}</div>
+            <div class="merge-slot-rarity" style="color:${rarityDef ? rarityDef.color : ''}">${getLang()==='ru'?rarityDef?.nameRu:rarityDef?.name}</div>
+          </div>`;
+        }).join('')}
       </div>
-    </div>
-  `;
+      <button class="merge-btn" onclick="W._doMerge()" ${mergeEnabled ? '' : 'disabled'}>
+        ${t('merge_btn')} ${mergeEnabled ? `— ${MERGE_COST[s.mergeSlots.find(sl => sl !== null)?.rarity] || 50} ●` : filled < 2 ? t('merge_select') : !allSame ? t('merge_empty') : ''}
+      </button>
+      <div class="merge-info">
+        ${filled}/9 ${t('merge_select')} | ${s.mergeSlotsUnlocked.length}/9 ${t('merge_unlock')}
+      </div>
+      ${bottomNav('merge')}
+    </div>`;
 }
 
-let rouletteSpinning = false;
-
-function spinRoulette() {
-  if (rouletteSpinning) return;
-  const result = store.spinRoulette();
-  if (!result) return;
-
-  rouletteSpinning = true;
-  const wheel = document.getElementById('rouletteWheel');
-  const btn = document.getElementById('rouletteSpinBtn');
-  const resultEl = document.getElementById('rouletteResult');
-  if (btn) btn.disabled = true;
-  if (resultEl) resultEl.innerHTML = '';
-
-  const typeAngles = { jackpot: 0, bigwin: 45, clone: 90, diamonds: 135, medium: 180, small: 225, lose: 270 };
-  const baseAngle = typeAngles[result.type] || 270;
-  const extraSpins = 360 * (4 + Math.floor(Math.random() * 3));
-  const finalAngle = extraSpins + baseAngle + Math.random() * 30 - 15;
-
-  if (wheel) {
-    wheel.style.transition = 'transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
-    wheel.style.transform = `rotate(${finalAngle}deg)`;
-  }
-
-  setTimeout(() => {
-    rouletteSpinning = false;
-    if (btn) btn.disabled = false;
-
-    const cls = result.type === 'jackpot' ? 'result-jackpot' : result.type === 'bigwin' ? 'result-bigwin' : result.type === 'medium' ? 'result-medium' : result.type === 'small' ? 'result-small' : result.type === 'diamonds' ? 'result-diamonds' : result.type === 'clone' ? 'result-clone' : 'result-lose';
-    if (resultEl) resultEl.innerHTML = `<div class="roulette-result-text ${cls}">${result.label}</div>`;
-
-    if (result.type === 'jackpot') playJackpot();
-    else if (result.type === 'lose') playLose();
-    else playWin();
-
-    showRouletteOverlay();
-
-    setTimeout(() => {
-      if (wheel) {
-        wheel.style.transition = 'none';
-        wheel.style.transform = 'rotate(0deg)';
-      }
-    }, 100);
-  }, 3700);
+/* ─── NPC List ─── */
+function showNPCList() {
+  document.getElementById('app').innerHTML = `
+    <div class="screen active npc-screen">
+      ${topbar(t('npc_title'))}
+      <div class="npc-scroll">
+        ${NPCS.map(npc => {
+          const color = npc.color || '#8b7355';
+          return `<div class="npc-card" onclick="W._npcDetail('${npc.id}')">
+            <div class="npc-avatar" style="background:${color}08;border:1px solid ${color}15;color:${color}">◉</div>
+            <div class="npc-info">
+              <div class="npc-name">${getLang() === 'ru' ? npc.nameRu : npc.name}</div>
+              <div class="npc-role">${t('npc_' + npc.id)?.substring(0, 40) || ''}</div>
+            </div>
+            <div style="color:rgba(255,255,255,0.1);font-size:12px">→</div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${bottomNav('npc')}
+    </div>`;
 }
 
-/* ─── Auth Particles ─── */
-function initAuthParticles() {
-  const container = document.getElementById('authParticles');
-  if (!container) return;
-  for (let i = 0; i < 30; i++) {
-    const p = document.createElement('div');
-    p.className = 'auth-particle';
-    p.style.left = Math.random() * 100 + '%';
-    p.style.top = Math.random() * 100 + '%';
-    p.style.animationDelay = Math.random() * 6 + 's';
-    p.style.animationDuration = (3 + Math.random() * 4) + 's';
-    p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
-    container.appendChild(p);
+/* ─── NPC Detail ─── */
+function showNPCDetail() {
+  if (!currentNPC) { showNPCList(); return; }
+  const s = store.state;
+  const npc = NPCS.find(n => n.id === currentNPC);
+  if (!npc) { showNPCList(); return; }
+  const color = npc.color || '#8b7355';
+  const questActive = s.questActive && s.questNPC === npc.id;
+  const canQuest = !s.questActive;
+
+  document.getElementById('app').innerHTML = `
+    <div class="screen active npc-screen">
+      ${topbar(getLang() === 'ru' ? npc.nameRu : npc.name, `<button class="topbar-back" onclick="W._nav('npc')">←</button>`)}
+      <div class="npc-scroll">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="npc-avatar" style="width:56px;height:56px;border-radius:12px;background:${color}08;border:2px solid ${color}20;color:${color};font-size:28px;display:flex;align-items:center;justify-content:center">◉</div>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:rgba(255,255,255,0.5)">${getLang() === 'ru' ? npc.nameRu : npc.name}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.1)">${npc.role}</div>
+          </div>
+        </div>
+        <div class="npc-dialog">${t('npc_' + npc.id)}</div>
+        <div class="npc-actions">
+          ${canQuest ? `<button class="npc-btn primary" onclick="W._startQuest('${npc.id}')">${t('quest_start')}</button>` : 
+            questActive ? `<button class="npc-btn secondary" disabled>${t('quest_progress')}</button>` : 
+            `<button class="npc-btn primary" onclick="W._startQuest('${npc.id}')">${t('quest_start')}</button>`}
+          <button class="npc-btn secondary" onclick="W._nav('collection')">${t('nav_collection')}</button>
+        </div>
+        ${questActive ? `
+          <div class="quest-panel" style="margin-top:12px">
+            <div class="quest-panel-title">${t('quest_progress')}</div>
+            <div class="quest-panel-progress"><div class="quest-panel-fill" id="questFill2" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div></div>
+          </div>
+        ` : ''}
+      </div>
+      ${bottomNav('npc')}
+    </div>`;
+}
+
+/* ─── Inventory ─── */
+function showInventory() {
+  const s = store.state;
+  const inv = s.inventory;
+  document.getElementById('app').innerHTML = `
+    <div class="screen active collection-screen">
+      ${topbar(t('inventory_title'))}
+      <div class="merge-header" style="padding-top:56px">
+        <div class="merge-title">${t('inventory_title')}</div>
+        <div class="merge-sub">${inv.length}/50</div>
+      </div>
+      ${inv.length === 0 ? `<div class="inv-empty">${t('inventory_empty')}</div>` : `
+        <div class="inv-grid">
+          ${inv.map(item => {
+            const rarityDef = RARITIES.find(r => r.id === item.rarity);
+            const catDef = ITEM_CATEGORIES.find(c => c.id === item.category);
+            return `<div class="inv-item" style="border-color:${rarityDef ? rarityDef.color + '15' : ''}" onclick="W._useItem('${item.uid}')">
+              <div class="inv-item-icon">${catDef ? catDef.icon : '?'}</div>
+              <div class="inv-item-name" style="color:${rarityDef ? rarityDef.color + '44' : ''}">${getLang()==='ru'?item.nameRu:item.name}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      `}
+      ${bottomNav('inventory')}
+    </div>`;
+}
+
+/* ─── Quests tick ─── */
+let _questJustCompleted = false;
+function updateTick() {
+  const s = store.state;
+  if (s.questActive && !_questJustCompleted) {
+    const completed = store.tickQuest();
+    if (completed) {
+      _questJustCompleted = true;
+      playComplete();
+      showToast(t('quest_complete'));
+      setTimeout(() => { _questJustCompleted = false; show(); }, 800);
+      return;
+    }
   }
+  // Update quest progress bars without re-render
+  const pct = (store.getQuestProgress() * 100).toFixed(0) + '%';
+  const fill = document.getElementById('questFill');
+  if (fill) fill.style.width = pct;
+  const fill2 = document.getElementById('questFill2');
+  if (fill2) fill2.style.width = pct;
+}
+
+let tickInterval = null;
+function startTick() {
+  if (tickInterval) return;
+  tickInterval = setInterval(updateTick, 1000);
+}
+function stopTick() {
+  if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+}
+
+/* ─── Toast ─── */
+function showToast(msg) {
+  let el = document.getElementById('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => el.classList.remove('show'), 2500);
 }
 
 /* ─── Daily Bonus ─── */
 function showDailyBonus() {
   if (!store.canClaimDaily()) return;
-  const amount = store.getDailyBonusAmount();
+  const s = store.state;
   const overlay = document.createElement('div');
   overlay.id = 'dailyOverlay';
+  overlay.className = 'daily-overlay';
   overlay.innerHTML = `
-    <div class="roulette-overlay" onclick="if(event.target===this)W._closeDaily()">
-      <div class="daily-panel">
-        <div class="daily-glow"></div>
-        <div class="daily-title">${t('dailyTitle')}</div>
-        <div class="daily-streak">${t('dailyStreak')}: ${store.state.dailyBonusStreak}/7</div>
-        <div class="daily-amount">+${fmt(amount)} $APE</div>
-        <div class="daily-sub">${t('dailySub')}</div>
-        <button class="roulette-spin-btn" onclick="W._claimDaily()" style="margin-top:12px">
-          🎁 ${t('dailyClaim')}
-        </button>
-        <button class="roulette-close" onclick="W._closeDaily()">&times;</button>
+    <div class="daily-panel" style="position:relative">
+      <button class="daily-close" onclick="document.getElementById('dailyOverlay').remove()">&times;</button>
+      <div class="daily-title">${t('daily_title')}</div>
+      <div class="daily-streak">${t('daily_streak')}: ${s.streak + 1}</div>
+      <div class="daily-rewards">
+        <div class="daily-reward">
+          <div class="daily-reward-icon">●</div>
+          <div class="daily-reward-amount">+${(s.streak + 1) * 10}</div>
+          <div style="font-size:8px;color:rgba(255,255,255,0.1)">${t('daily_gold')}</div>
+        </div>
+        <div class="daily-reward">
+          <div class="daily-reward-icon">⬡</div>
+          <div class="daily-reward-amount">+${Math.floor((s.streak + 1) / 2)}</div>
+          <div style="font-size:8px;color:rgba(255,255,255,0.1)">${t('daily_crystals')}</div>
+        </div>
+      </div>
+      <button class="daily-btn" onclick="W._claimDaily()">${t('daily_claim')}</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+/* ─── Tutorial ─── */
+function renderTutorial() {
+  const s = store.state;
+  if (s.tutorialDone) return;
+  let existing = document.getElementById('tutOverlay');
+  if (existing) existing.remove();
+
+  const step = s.tutorialStep;
+  if (step >= INITIAL_TUTORIAL.length) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'tutOverlay';
+  overlay.className = 'tut-overlay';
+  overlay.innerHTML = `
+    <div class="tut-panel">
+      <div class="tut-text">${t(INITIAL_TUTORIAL[step])}</div>
+      <div class="tut-actions">
+        <button class="tut-btn primary" onclick="W._tutNext()">${t('tut_next')}</button>
+        <button class="tut-btn skip" onclick="W._tutSkip()">${t('tut_skip')}</button>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
 }
 
-/* ─── Combo Display ─── */
-function updateComboDisplay() {
-  const combo = store.state.comboCount;
-  if (combo < 3) return;
-  let el = document.getElementById('comboBadge');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'comboBadge';
-    el.className = 'combo-badge';
-    const scene = document.getElementById('gameScene');
-    if (scene) scene.appendChild(el);
-  }
-  const mult = 1 + Math.min(combo - 1, 20) * 0.05;
-  el.textContent = `COMBO x${combo} (${mult.toFixed(1)}x)`;
-  el.style.opacity = '1';
-  el.style.transform = 'scale(1.2)';
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { el.style.opacity = '0'; }, 1500);
-}
-
-/* ─── Wardrobe Screen ─── */
-function showWardrobe() {
-  const s = store.state;
-  const isEquipped = (slot, itemId) => s.equippedOutfit[slot] === itemId;
-  const ownedIds = s.outfitInventory.map(i => i.id);
-  document.getElementById('app').innerHTML = `
-    <div class="screen active wardrobe-screen">
-      ${topbarHTML(t('navWardrobe'), '#a855f7')}
-      <div class="wardrobe-scroll">
-        ${OUTFIT_SLOTS.map(slot => `
-          <div class="wardrobe-section">
-            <div class="wardrobe-section-title">${t('outfitSlot_' + slot)}</div>
-            <div class="wardrobe-items">
-              ${OUTFIT_ITEMS.filter(i => i.slot === slot).map(item => {
-                const owned = ownedIds.includes(item.id);
-                const equipped = isEquipped(slot, item.id);
-                const rarityDef = OUTFIT_RARITIES.find(r => r.id === item.rarity);
-                const color = rarityDef ? rarityDef.color : '#fff';
-                return `
-                  <div class="wardrobe-item ${owned?'owned':'locked'} ${equipped?'equipped':''}" style="border-color:${color}40" onclick="${owned && !equipped ? `W._equipOutfit('${item.id}')` : equipped ? `W._unequipOutfit('${slot}')` : ''}">
-                    <div class="wardrobe-item-icon" style="background:${color}22;border-color:${color}">${item.name[0]}</div>
-                    <div class="wardrobe-item-info">
-                      <div class="wardrobe-item-name" style="color:${color}">${getLang()==='ru'?item.nameRu:item.name}</div>
-                      <div class="wardrobe-item-rarity">${t('rarity_' + item.rarity)}</div>
-                      <div class="wardrobe-item-bonus">+${(rarityDef ? rarityDef.bonus : 0).toFixed(4)} ⬡/click</div>
-                    </div>
-                    ${equipped ? '<div class="wardrobe-equip-badge">✓</div>' : owned ? '<div class="wardrobe-own-badge">●</div>' : '<div class="wardrobe-lock-icon">🔒</div>'}
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `).join('')}
-        ${COLLAB_SKINS.length > 0 ? `
-          <div class="wardrobe-section">
-            <div class="wardrobe-section-title">${t('collabSkins')}</div>
-            <div class="wardrobe-items">
-              ${COLLAB_SKINS.map(skin => {
-                const owned = ownedIds.includes('skin_' + skin.id);
-                const active = s.activeCollabSkin === skin.id;
-                const rarityDef = OUTFIT_RARITIES.find(r => r.id === skin.rarity);
-                const color = rarityDef ? rarityDef.color : '#f7c948';
-                return `
-                  <div class="wardrobe-item ${owned?'owned':'locked'} ${active?'equipped':''}" style="border-color:${color}40" onclick="${owned && !active ? `W._equipCollab('${skin.id}')` : ''}">
-                    <div class="wardrobe-item-icon" style="background:${color}22;border-color:${color};font-size:10px">✦</div>
-                    <div class="wardrobe-item-info">
-                      <div class="wardrobe-item-name" style="color:${color}">${getLang()==='ru'?skin.nameRu:skin.name}</div>
-                      <div class="wardrobe-item-rarity">${t('rarity_' + skin.rarity)}</div>
-                      <div class="wardrobe-item-bonus">${t('collabSkin')} +${skin.bonus.toFixed(4)} ⬡/click</div>
-                    </div>
-                    ${active ? '<div class="wardrobe-equip-badge">✓</div>' : owned ? '<div class="wardrobe-own-badge">●</div>' : '<div class="wardrobe-lock-icon">🔒</div>'}
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        ` : ''}
-      </div>
-      ${navHTML('wardrobe')}
-    </div>`;
-}
-
-/* ─── Casino / Gacha Screen ─── */
-function showCasino() {
-  const s = store.state;
-  const singleCost = 100;
-  const tenCost = 900;
-  document.getElementById('app').innerHTML = `
-    <div class="screen active casino-screen">
-      ${topbarHTML(t('navCasino'), '#f7c948')}
-      <div class="casino-scroll">
-        <div class="casino-banner">
-          <div class="casino-banner-glow"></div>
-          <div class="casino-banner-text">${t('casinoTitle')}</div>
-          <div class="casino-banner-sub">${t('casinoSub')}</div>
-        </div>
-        <div class="casino-rates">
-          ${OUTFIT_RARITIES.map((r, i) => {
-            const dropDef = OUTFIT_DROP_RATES.find(d => d.rarity === r.id);
-            const chance = dropDef ? (dropDef.chance * 100).toFixed(1) : '0';
-            return `<div class="casino-rate-row" style="color:${r.color}">
-              <span class="casino-rate-dot" style="background:${r.color}"></span>
-              <span class="casino-rate-name">${t('rarity_' + r.id)}</span>
-              <span class="casino-rate-chance">${chance}%</span>
-              <span class="casino-rate-bonus">+${r.bonus.toFixed(4)} ⬡/clk</span>
-            </div>`;
-          }).join('')}
-          <div class="casino-rate-row" style="color:#666">
-            <span class="casino-rate-dot" style="background:#666"></span>
-            <span class="casino-rate-name">${t('nothing')}</span>
-            <span class="casino-rate-chance">${(OUTFIT_DROP_RATES.find(d=>d.rarity==='nothing')?.chance*100||8).toFixed(1)}%</span>
-          </div>
-        </div>
-        <div class="casino-actions">
-          <button class="casino-btn casino-btn-single" onclick="W._gachaPull(1)">
-            <span class="casino-btn-price">${singleCost} 💎</span>
-            <span class="casino-btn-label">${t('pullOnce')}</span>
-          </button>
-          <button class="casino-btn casino-btn-ten" onclick="W._gachaPull(10)">
-            <span class="casino-btn-price">${tenCost} 💎</span>
-            <span class="casino-btn-label">${t('pullTen')}</span>
-          </button>
-        </div>
-        ${s.masonBalance > 0 ? `<div class="casino-mason-balance">⬡ ${t('masonBalance')}: ${s.masonBalance.toFixed(4)}</div>` : ''}
-      </div>
-      ${navHTML('casino')}
-    </div>`;
-}
-
-/* ─── Outfit Drop Notification ─── */
-function showOutfitNotification(item) {
-  const rarityDef = OUTFIT_RARITIES.find(r => r.id === item.rarity);
-  const color = rarityDef ? rarityDef.color : '#fff';
-  const el = document.createElement('div');
-  el.className = 'outfit-notification';
-  el.innerHTML = `
-    <div class="outfit-notif-glow" style="background:${color}"></div>
-    <div class="outfit-notif-content">
-      <div class="outfit-notif-icon" style="border-color:${color};color:${color}">${item.name[0]}</div>
-      <div class="outfit-notif-info">
-        <div class="outfit-notif-title">${t('outfitFound')}</div>
-        <div class="outfit-notif-name" style="color:${color}">${getLang()==='ru'?item.nameRu:item.name}</div>
-        <div class="outfit-notif-rarity">${t('rarity_' + item.rarity)} ${t('outfitSlot_' + item.slot)}</div>
-      </div>
+/* ─── Item reveal ─── */
+function showItemDetail(itemId) {
+  const item = store.getItem(itemId);
+  if (!item) return;
+  const rarityDef = RARITIES.find(r => r.id === item.rarity);
+  const catDef = ITEM_CATEGORIES.find(c => c.id === item.category);
+  const overlay = document.createElement('div');
+  overlay.className = 'quest-overlay';
+  overlay.innerHTML = `
+    <div class="quest-panel" style="position:relative">
+      <button style="position:absolute;top:8px;right:12px;font-size:18px;color:rgba(255,255,255,0.1);background:none" onclick="this.closest('.quest-overlay').remove()">&times;</button>
+      <div class="quest-panel-title" style="color:${rarityDef ? rarityDef.color : '#fff'}">${catDef ? catDef.icon : ''} ${getLang()==='ru'?item.nameRu:item.name}</div>
+      <div style="font-size:11px;color:${rarityDef ? rarityDef.color : '#fff'};margin:4px 0">${rarityDef ? (getLang()==='ru'?rarityDef.nameRu:rarityDef.name) : ''}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.1);margin-bottom:12px">${getLang()==='ru'?catDef?.nameRu:catDef?.name}</div>
+      <button class="quest-panel-btn" onclick="this.closest('.quest-overlay').remove()">OK</button>
     </div>
   `;
-  document.body.appendChild(el);
-  setTimeout(() => { el.classList.add('show'); }, 50);
-  setTimeout(() => {
-    el.classList.remove('show');
-    setTimeout(() => el.remove(), 500);
-  }, 3500);
+  document.body.appendChild(overlay);
 }
 
-/* ─── Mason Feed Handler ─── */
-window.W._feedMason = () => {
-  const result = store.feedMason();
-  if (result === null) {
-    const timeLeft = store.getMasonFeedTimeLeft();
-    if (timeLeft > 0) {
-      const hrs = Math.floor(timeLeft / 3600000);
-      const mins = Math.floor((timeLeft % 3600000) / 60000);
-      showToast(t('masonCooldown', hrs, mins));
-    } else {
-      showToast(t('masonNoApe'));
-    }
+/* ─── Merge slot picker ─── */
+function showMergePicker(idx) {
+  const s = store.state;
+  const inv = s.inventory;
+  if (inv.length === 0) { showToast(t('inventory_empty')); return; }
+  const overlay = document.createElement('div');
+  overlay.className = 'quest-overlay';
+  overlay.innerHTML = `
+    <div class="quest-panel" style="max-width:300px;max-height:60vh;overflow-y:auto;position:relative">
+      <button style="position:sticky;top:0;float:right;font-size:18px;color:rgba(255,255,255,0.1);background:none;z-index:1" onclick="this.closest('.quest-overlay').remove()">&times;</button>
+      <div class="quest-panel-title" style="margin-bottom:8px">${t('merge_select')}</div>
+      ${inv.map(item => {
+        const rarityDef = RARITIES.find(r => r.id === item.rarity);
+        const catDef = ITEM_CATEGORIES.find(c => c.id === item.category);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer" onclick="W._placeInSlot(${idx},'${item.uid}')">
+          <span style="font-size:16px">${catDef ? catDef.icon : '?'}</span>
+          <span style="flex:1;font-size:10px;text-align:left;color:${rarityDef ? rarityDef.color : ''}">${getLang()==='ru'?item.nameRu:item.name}</span>
+          <span style="font-size:8px;color:rgba(255,255,255,0.1)">${rarityDef ? (getLang()==='ru'?rarityDef.nameRu:rarityDef.name) : ''}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+/* ─── Merge result ─── */
+function showMergeResult(result) {
+  const rarityDef = RARITIES.find(r => r.id === result.nextRarity);
+  const catDef = ITEM_CATEGORIES.find(c => c.id === result.result.category);
+  const overlay = document.createElement('div');
+  overlay.className = 'quest-overlay';
+  overlay.innerHTML = `
+    <div class="quest-panel">
+      <div class="quest-panel-title" style="color:${rarityDef ? rarityDef.color : '#f7c948'}">${t('merge_success')}!</div>
+      <div style="font-size:32px;margin:8px 0">${catDef ? catDef.icon : '⬡'}</div>
+      <div style="font-size:13px;font-weight:600;color:${rarityDef ? rarityDef.color : '#f7c948'}">${getLang()==='ru'?result.result.nameRu:result.result.name}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.1);margin:4px 0">${rarityDef ? (getLang()==='ru'?rarityDef.nameRu:rarityDef.name) : ''}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.05);margin-bottom:12px">-${result.cost} ●</div>
+      <button class="quest-panel-btn" onclick="this.closest('.quest-overlay').remove();show()">OK</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+/* ─── Global Handlers ─── */
+window.W = {};
+
+window.W._nav = (s) => {
+  currentScreen = s;
+  if (s !== 'npc_detail') currentNPC = null;
+  if (s !== 'collection') currentCategory = null;
+  show();
+};
+window.W._lang = () => {
+  setLang(getLang() === 'en' ? 'ru' : 'en');
+  show();
+};
+window.W._cat = (cat) => {
+  currentCategory = cat;
+  showCollection();
+};
+window.W._npcDetail = (id) => {
+  currentNPC = id;
+  currentScreen = 'npc_detail';
+  showNPCDetail();
+};
+window.W._startQuest = (npcId) => {
+  if (store.startQuest(npcId)) {
+    playQuest();
+    showToast(t('quest_start'));
+    show();
+  } else {
+    showToast(t('quest_progress'));
+  }
+};
+window.W._showItem = (id) => { showItemDetail(id); };
+window.W._addToSlot = (idx) => { showMergePicker(idx); };
+window.W._placeInSlot = (idx, uid) => {
+  if (store.placeInMergeSlot(idx, uid)) {
+    playTap();
+    document.querySelector('.quest-overlay')?.remove();
+    showMerge();
+  } else {
+    showToast(t('inventory_empty'));
+  }
+};
+window.W._removeSlot = (idx) => {
+  store.removeFromMergeSlot(idx);
+  playTap();
+  showMerge();
+};
+window.W._unlockSlot = (idx) => {
+  if (store.unlockMergeSlot()) { playCollect(); showMerge(); }
+  else showToast(t('merge_no_gold'));
+};
+window.W._doMerge = () => {
+  const result = store.tryMerge();
+  if (!result) { showToast(t('merge_empty')); playError(); return; }
+  if (!result.result) {
+    if (result.messageKey) showToast(t(result.messageKey));
+    playError();
     return;
   }
-  playBuy();
-  showToast(`${t('masonEarned')} ${result.earned.toFixed(4)} ⬡`);
-  show();
+  playMerge();
+  showMergeResult(result);
 };
-
-/* ─── Gacha Pull Handler ─── */
-window.W._gachaPull = (count) => {
-  const s = store.state;
-  const cost = count === 1 ? 100 : 900;
-  if (s.diamonds < cost) { showToast(t('notEnoughDiamonds')); return; }
-  s.diamonds -= cost;
-  let items = [];
-  for (let i = 0; i < count; i++) {
-    const drop = store.rollOutfitDrop();
-    if (drop && !drop.duplicate) items.push(drop);
+window.W._useItem = (uid) => {
+  const item = store.state.inventory.find(i => i.uid === uid);
+  if (!item) return;
+  const catDef = ITEM_CATEGORIES.find(c => c.id === item.category);
+  // Click to collect + gain knowledge
+  if (store.collectItem(item.id)) {
+    store.addCurrency('knowledge', 1);
+    store.removeFromInventory(uid);
+    playCollect();
+    show();
+    showToast(`+1 ${t('knowledge')}`);
   }
-  store.save();
-  playBuy();
-  if (items.length > 0) {
-    items.forEach(item => showOutfitNotification(item));
-  } else {
-    showToast(t('gachaNothing'));
+};
+window.W._daily = () => { showDailyBonus(); };
+window.W._claimDaily = () => {
+  const r = store.claimDaily();
+  if (r) {
+    playCollect();
+    document.getElementById('dailyOverlay')?.remove();
+    show();
+    showToast(`+${r.gold} ● +${r.crystals} ⬡`);
   }
-  show();
 };
-
-window.W._equipOutfit = (itemId) => {
-  store.equipOutfit(itemId);
-  show();
+window.W._tutNext = () => {
+  store.advanceTutorial();
+  document.getElementById('tutOverlay')?.remove();
+  renderTutorial();
 };
-
-window.W._unequipOutfit = (slot) => {
-  store.unequipOutfit(slot);
-  show();
+window.W._tutSkip = () => {
+  store.completeTutorial();
+  document.getElementById('tutOverlay')?.remove();
 };
-
-window.W._equipCollab = (skinId) => {
-  store.equipCollabSkin(skinId);
-  show();
-};
-
-/* ─── Toast ─── */
-function showToast(msg) {
-  let el = document.getElementById('toast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'toast';
-    el.className = 'toast';
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => el.classList.remove('show'), 3000);
-}
 
 /* ─── Init ─── */
 initLang();
-document.getElementById('app').innerHTML = `<div class="loading"><div class="loading-ring"></div><p>${t('loading')}</p></div>`;
+startTick();
+
+// Check Telegram
+if (typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+}
+
+// Show
+currentScreen = 'temple';
+currentCategory = null;
+show();
+
+// Daily bonus check
 setTimeout(() => {
-  if (isInsideTelegram()) {
-    const tg = getTelegramUser();
-    if (tg) store.setTgUser(tg);
-    currentScreen = 'game';
-  } else {
-    store.setDemoMode();
-    currentScreen = 'game';
-  }
-  show();
-  startGameLoop();
-  setTimeout(() => showDailyBonus(), 1500);
-}, 600);
+  if (store.canClaimDaily()) showDailyBonus();
+}, 1000);

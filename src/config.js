@@ -1,609 +1,119 @@
-const S = './assets/illuminati/sprites';
+export const TG_BOT = 'Illuminatemasonbot';
+export const SUPPORT_URL = 'https://t.me/Superadminist';
 
-export const ICONS = {
-  clonesCommon: S + '/Section_Clones_Common.png',
-  clonesRare: S + '/Section_Clones_Rare.png',
-  clonesEpic: S + '/Section_Clones_Epic.png',
-  managers: S + '/Section_Managers.png',
-  upgrades: S + '/Section_Upgrades.png',
-  videoAd: S + '/video_ads_icon.png',
-  productionBoost: S + '/production_boost_icon.png',
-  speed: S + '/speed_icon.png',
-  diamondAd: S + '/diamond_ad_icon.png',
-  diamond: S + '/diamond.png',
-  bronzeStar: S + '/bronzeStar.png',
-  silverStar: S + '/silverStar.png',
-  goldStar: S + '/goldStar.png',
-  buttonGreen: S + '/button_green.png',
-  buttonGreenMoney: S + '/button_green_money.png',
-  buttonBigGreen: S + '/button_big_green.png',
-  buttonBigPurple: S + '/button_big_purple.png',
-  confirm: S + '/confirm_button.png',
-  bigOffer: S + '/big_offer_button.png',
-  personPurple: S + '/person_purple.png',
-  personYellow: S + '/person_yellow.png',
-  eye1: S + '/Icon_Eye_1.png',
-  eye2: S + '/Icon_Eye_2.png',
-  eye3: S + '/Icon_Eye_3.png',
-  mason: S + '/goldStar.png',
-  portal: S + '/big_offer_button.png',
-  stars: S + '/bronzeStar.png',
-};
-
-export const ILLUMINEUS = {
-  name: 'Illumineus',
-  baseSprite: S + '/CharactersStage01-sheet-ipadhd_0.png',
-  welcomeSprite: S + '/Illumineus_Wellcome.png',
-  endSprite: S + '/Illumineus_End.png',
-  warningSprite: S + '/Illumineus_Warning.png',
-  endBrightSprite: S + '/Illumineus_End_Bright.png',
-  eyeSprites: [
-    S + '/Icon_Eye_1.png',
-    S + '/Icon_Eye_2.png',
-    S + '/Icon_Eye_3.png',
-  ],
-  pupilSprite: S + '/Icon_Pupil.png',
-  eyeWhiteSprite: S + '/Icon_Eye_White.png',
-};
-
-export const COSTUMES = [
-  { id: 'default', name: 'Classic', nameRu: 'Классический', sprite: S + '/CharactersStage01-sheet-ipadhd_0.png', bonus: 1.0, unlocked: true, cost: 0 },
-  { id: 'welcome', name: 'Welcomer', nameRu: 'Приветствующий', sprite: S + '/Illumineus_Wellcome.png', bonus: 1.1, unlocked: false, cost: 500 },
-  { id: 'end', name: 'Destroyer', nameRu: 'Разрушитель', sprite: S + '/CharactersStage02-sheet-ipadhd_0.png', bonus: 1.2, unlocked: false, cost: 2000 },
-  { id: 'warning', name: 'Sentinel', nameRu: 'Страж', sprite: S + '/Illumineus_Warning.png', bonus: 1.15, unlocked: false, cost: 1500 },
-  { id: 'bright', name: 'Ascended', nameRu: 'Вознесённый', sprite: S + '/CharactersStage03-sheet-ipadhd_0.png', bonus: 1.3, unlocked: false, cost: 5000 },
-  { id: 'person_purple', name: 'Shadow Agent', nameRu: 'Теневой Агент', sprite: S + '/person_purple.png', bonus: 1.25, unlocked: false, cost: 3000 },
-  { id: 'person_yellow', name: 'Golden Eye', nameRu: 'Золотой Глаз', sprite: S + '/person_yellow.png', bonus: 1.35, unlocked: false, cost: 7500 },
+export const RARITIES = [
+  { id: 'common', name: 'Common', nameRu: 'Обычный', color: '#8b7355', bonus: 1, frame: 'frame_common' },
+  { id: 'uncommon', name: 'Uncommon', nameRu: 'Необычный', color: '#10b981', bonus: 2, frame: 'frame_uncommon' },
+  { id: 'rare', name: 'Rare', nameRu: 'Редкий', color: '#3b82f6', bonus: 3, frame: 'frame_rare' },
+  { id: 'epic', name: 'Epic', nameRu: 'Эпический', color: '#a855f7', bonus: 5, frame: 'frame_epic' },
+  { id: 'legendary', name: 'Legendary', nameRu: 'Легендарный', color: '#f7c948', bonus: 10, frame: 'frame_legendary' },
+  { id: 'mythic', name: 'Mythic', nameRu: 'Мифический', color: '#ef4444', bonus: 20, frame: 'frame_mythic' },
+  { id: 'ancient', name: 'Ancient', nameRu: 'Древний', color: '#8b7355', bonus: 30, frame: 'frame_ancient' },
+  { id: 'divine', name: 'Divine', nameRu: 'Божественный', color: '#e0dcc0', bonus: 50, frame: 'frame_divine' },
+  { id: 'secret', name: 'Secret', nameRu: 'Секретный', color: '#10b981', bonus: 100, frame: 'frame_secret' },
 ];
 
-export const AD_BOOSTS = [
-  { id: 'ad_2x_income', name: '2x Income', nameRu: 'Двойной Доход', desc: 'Double income for 60s', icon: S + '/video_ads_icon.png', duration: 60000, multiplier: 2, cooldown: 120000 },
-  { id: 'ad_3x_income', name: '3x Income', nameRu: 'Тройной Доход', desc: 'Triple income for 30s', icon: S + '/production_boost_icon.png', duration: 30000, multiplier: 3, cooldown: 180000 },
-  { id: 'ad_speed', name: 'Speed Boost', nameRu: 'Ускорение', desc: 'Managers 2x faster for 60s', icon: S + '/speed_icon.png', duration: 60000, multiplier: 2, cooldown: 120000 },
-  { id: 'ad_free_clone', name: 'Free Clone', nameRu: 'Бесплатный Клон', desc: 'Get a random clone free', icon: S + '/Section_Clones_Common.png', duration: 0, multiplier: 0, cooldown: 300000 },
-  { id: 'ad_diamonds', name: 'Free Diamonds', nameRu: 'Бесплатные Алмазы', desc: 'Get 5 diamonds', icon: S + '/diamond_ad_icon.png', duration: 0, multiplier: 0, cooldown: 300000 },
-  { id: 'ad_time_warp', name: 'Time Warp', nameRu: 'Временной Искривление', desc: '2x everything for 120s', icon: S + '/speed_icon.png', duration: 120000, multiplier: 2, cooldown: 600000 },
+export const ITEM_CATEGORIES = [
+  { id: 'books', name: 'Books', nameRu: 'Книги', icon: '📖' },
+  { id: 'elixirs', name: 'Elixirs', nameRu: 'Эликсиры', icon: '⚗' },
+  { id: 'coins', name: 'Coins', nameRu: 'Монеты', icon: '●' },
+  { id: 'artifacts', name: 'Artifacts', nameRu: 'Артефакты', icon: '△' },
+  { id: 'seals', name: 'Seals', nameRu: 'Печати', icon: '◎' },
+  { id: 'amulets', name: 'Amulets', nameRu: 'Амулеты', icon: '◇' },
+  { id: 'crystals', name: 'Crystals', nameRu: 'Кристаллы', icon: '⬡' },
+  { id: 'masks', name: 'Masks', nameRu: 'Маски', icon: '◉' },
+  { id: 'collectibles', name: 'Collectibles', nameRu: 'Коллекции', icon: '☰' },
 ];
 
-export const STAR_REQUIREMENTS = [
-  { stars: 1, type: 'bronze', requirement: 500 },
-  { stars: 2, type: 'bronze', requirement: 2000 },
-  { stars: 3, type: 'bronze', requirement: 8000 },
-  { stars: 4, type: 'bronze', requirement: 30000 },
-  { stars: 5, type: 'bronze', requirement: 100000 },
-  { stars: 1, type: 'silver', requirement: 250000 },
-  { stars: 2, type: 'silver', requirement: 750000 },
-  { stars: 3, type: 'silver', requirement: 2000000 },
-  { stars: 4, type: 'silver', requirement: 5000000 },
-  { stars: 5, type: 'silver', requirement: 15000000 },
-  { stars: 1, type: 'gold', requirement: 50000000 },
-  { stars: 2, type: 'gold', requirement: 200000000 },
-  { stars: 3, type: 'gold', requirement: 800000000 },
-  { stars: 4, type: 'gold', requirement: 3000000000 },
-  { stars: 5, type: 'gold', requirement: 10000000000 },
-];
-
-export const CLONE_PORTRAITS = [
-  S + '/0.png',
-  S + '/1.png',
-  S + '/2.png',
-  S + '/3.png',
-  S + '/4.png',
-  S + '/5.png',
-  S + '/6.png',
-  S + '/7.png',
-  S + '/8.png',
-  S + '/9.png',
-  S + '/10.png',
-  S + '/11.png',
-  S + '/12.png',
-  S + '/13.png',
-  S + '/14.png',
-];
-
-export const CHARACTER_SPRITES = [
-  S + '/CharactersStage01-sheet-ipadhd_0.png',
-  S + '/CharactersStage01-sheet-ipadhd_1.png',
-  S + '/CharactersStage01-sheet-ipadhd_2.png',
-  S + '/CharactersStage01-sheet-ipadhd_3.png',
-  S + '/CharactersStage01-sheet-ipadhd_4.png',
-  S + '/CharactersStage01-sheet-ipadhd_5.png',
-  S + '/CharactersStage01-sheet-ipadhd_6.png',
-  S + '/CharactersStage01-sheet-ipadhd_7.png',
-  S + '/CharactersStage01-sheet-ipadhd_8.png',
-  S + '/CharactersStage01-sheet-ipadhd_9.png',
-];
-
-export const ANIMATION_FRAMES = {
-  gameCell: [
-    S + '/Animation_GameCell-sheet-ipadhd_0.png',
-    S + '/Animation_GameCell-sheet-ipadhd_1.png',
-    S + '/Animation_GameCell-sheet-ipadhd_2.png',
-    S + '/Animation_GameCell-sheet-ipadhd_3.png',
-    S + '/Animation_GameCell-sheet-ipadhd_4.png',
-  ],
-  popup: [
-    S + '/Animation_Popups-sheet-ipadhd_0.png',
-    S + '/Animation_Popups-sheet-ipadhd_1.png',
-    S + '/Animation_Popups-sheet-ipadhd_7.png',
-    S + '/Animation_Popups-sheet-ipadhd_8.png',
-  ],
+// Generate 135+ items across categories and rarities
+const ITEM_NAMES = {
+  books: { en: ['Forbidden Grimoire','Emerald Codex','Golden Scroll','Obsidian Tome','Rune Folio','Ancient Manuscript','Crystal Lexicon','Shadow Chronicle','Divine Scripture','Void Record','Temple Archives','Mason Diary','Illuminated Page','Secret Treatise','Mythos Collection','Arcane Primer','Astral Codex','Eternal Vellum','Ritual Script','Thousand Leaves'], ru: ['Запретный Гримуар','Изумрудный Кодекс','Золотой Свиток','Обсидиановый Том','Руническое Фолио','Древняя Рукопись','Кристальный Лексикон','Теневая Хроника','Божественное Писание','Запись Бездны','Храмовые Архивы','Дневник Маcона','Иллюминированная Страница','Секретный Трактат','Коллекция Мифов','Арканный Букварь','Астральный Кодекс','Вечный Пергамент','Ритуальный Сценарий','Тысяча Листьев'] },
+  elixirs: { en: ['Emerald Tincture','Golden Nectar','Crystal Solvent','Black Philosopher','Vitality Draught','Mana Infusion','Alkahest','Lapis Elixir','Aether Essence','Phoenix Tear','Dragon Breath','Moonwater','Sun Drop','Void Extract','Chaos Brew','Starlight Potion','Shadow Essence','Divine Ambrosia','Rune Oil','Crimson Flask'], ru: ['Изумрудная Настойка','Золотой Нектар','Кристальный Растворитель','Чёрный Философ','Эликсир Жизни','Вливание Маны','Алкагест','Лазурный Эликсир','Эссенция Эфира','Слеза Феникса','Драконье Дыхание','Лунная Вода','Солнечная Капля','Экстракт Бездны','Зелье Хаоса','Звёздное Зелье','Теневая Эссенция','Божественная Амброзия','Руническое Масло','Багровая Колба'] },
+  coins: { en: ['Bronze Mark','Silver Shekel','Gold Talent','Emerald Drachma','Black Stater','Crystal Denarius','Obsidian Sestertius','Imperial Solidus','Mason Sovereign','Temple Aureus','Ancient Obol','Royal Ducat','Shadow Gulden','Divine Florin','Secret Bezant','Dragon Dinar','Phoenix Penny','Rune Crown','Void Ducat','Star Tael'], ru: ['Бронзовая Марка','Серебряный Шекель','Золотой Талант','Изумрудная Драхма','Чёрный Статер','Кристальный Денарий','Обсидиановый Сестерций','Имперский Солид','Масонский Суверен','Храмовый Аурей','Древний Обол','Королевский Дукат','Теневой Гульден','Божественный Флорин','Секретный Безант','Драконий Динар','Пенни Феникса','Руническая Корона','Дукат Бездны','Звёздный Таэль'] },
+  artifacts: { en: ['Eye of Providence','Emerald Ankh','Golden Pyramid','Obsidian Obelisk','Crystal Skull','Rune Tablet','Masonic Compass','Ancient Seal','Void Prism','Divine Sundial','Chronometer','Shadow Lantern','Temple Key','Philosopher Stone','Aether Lens','Dragon Scale','Phoenix Feather','Moon Dial','Star Chart','Void Compass'], ru: ['Глас Провидения','Изумрудный Анх','Золотая Пирамида','Обсидиановый Обелиск','Хрустальный Череп','Руническая Табличка','Масонский Циркуль','Древняя Печать','Призма Бездны','Божественные Часы','Хронометр','Теневой Фонарь','Храмовый Ключ','Философский Камень','Линза Эфира','Драконья Чешуя','Перо Феникса','Лунный Циферблат','Звёздная Карта','Компас Бездны'] },
+  seals: { en: ['Wax Seal of Order','Emerald Signet','Golden Stamp','Black Imprint','Crystal Seal','Rune Brand','Mason Emblem','Temple Mark','Ancient Crest','Void Sigil','Divine Brand','Shadow Seal','Royal Stamp','Secret Sign','Dragon Brand','Phoenix Crest','Star Sigil','Moon Brand','Sun Stamp','Eternal Seal'], ru: ['Печать Порядка','Изумрудный Перстень','Золотая Марка','Чёрный Оттиск','Хрустальная Печать','Руническое Клеймо','Эмблема Масона','Храмовая Метка','Древний Герб','Сигилла Бездны','Божественное Клеймо','Теневая Печать','Королевская Марка','Тайный Знак','Драконье Клеймо','Герб Феникса','Звёздная Сигилла','Лунная Марка','Солнечная Печать','Вечная Печать'] },
+  amulets: { en: ['Bronze Pendant','Silver Charm','Gold Talisman','Emerald Amulet','Obsidian Necklace','Crystal Pendant','Rune Charm','Mason Brooch','Temple Amulet','Ancient Talisman','Void Pendant','Divine Charm','Shadow Necklace','Royal Amulet','Secret Talisman','Dragon Amulet','Phoenix Pendant','Star Charm','Moon Talisman','Sun Pendant'], ru: ['Бронзовая Подвеска','Серебряный Оберег','Золотой Талисман','Изумрудный Амулет','Обсидиановое Ожерелье','Кристальная Подвеска','Рунический Оберег','Брошь Масона','Храмовой Амулет','Древний Талисман','Подвеска Бездны','Божественный Оберег','Теневое Ожерелье','Королевский Амулет','Тайный Талисман','Амулет Дракона','Подвеска Феникса','Звёздный Оберег','Лунный Талисман','Солнечная Подвеска'] },
+  crystals: { en: ['Emerald Shard','Golden Crystal','Black Diamond','Sapphire Gem','Ruby Heart','Amethyst Cluster','Topaz Prism','Onyx Stone','Crystal Core','Void Crystal','Divine Gem','Shadow Crystal','Rune Stone','Star Fragment','Moon Crystal','Sun Gem','Dragon Eye','Phoenix Stone','Eternal Ice','Chaos Shard'], ru: ['Осколок Изумруда','Золотой Кристалл','Чёрный Алмаз','Сапфировая Глыба','Рубиновое Сердце','Гроздь Аметиста','Топазная Призма','Ониксовый Камень','Кристальное Ядро','Кристалл Бездны','Божественный Самоцвет','Теневой Кристалл','Рунический Камень','Осколок Звезды','Лунный Кристалл','Солнечный Самоцвет','Драконий Глаз','Камень Феникса','Вечный Лёд','Осколок Хаоса'] },
+  masks: { en: ['Ceremonial Mask','Emerald Visage','Golden Face','Black Veil','Crystal Mask','Rune Visor','Obsidian Face','Mason Hood','Temple Visage','Ancient Mask','Void Face','Divine Veil','Shadow Mask','Royal Visage','Secret Mask','Dragon Face','Phoenix Veil','Star Mask','Moon Visor','Sun Face'], ru: ['Церемониальная Маска','Изумрудный Лик','Золотое Лицо','Чёрная Вуаль','Хрустальная Маска','Руническое Забрало','Обсидиановый Лик','Капюшон Масона','Храмовой Лик','Древняя Маска','Лик Бездны','Божественная Вуаль','Теневая Маска','Королевский Лик','Секретная Маска','Драконий Лик','Вуаль Феникса','Звёздная Маска','Лунное Забрало','Солнечный Лик'] },
+  collectibles: { en: ['Miniature Temple','Emerald Globe','Golden Pyramid','Obsidian Idol','Crystal Orb','Rune Totem','Mason Trophy','Temple Relic','Ancient Doll','Void Figurine','Divine Statue','Shadow Effigy','Royal Bust','Secret Idol','Dragon Miniature','Phoenix Replica','Star Globe','Moon Statue','Sun Idol','Eternal Shrine'], ru: ['Миниатюрный Храм','Изумрудный Глобус','Золотая Пирамида','Обсидиановый Идол','Хрустальная Сфера','Рунический ТотеМ','Трофей Масона','Храмовая Реликвия','Древняя Кукла','Фигурка Бездны','Божественная Статуя','Теневой Истукан','Королевский Бюст','Тайный Идол','Миниатюра Дракона','Копия Феникса','Звёздный Глобус','Лунная Статуя','Солнечный Идол','Вечное Святилище'] },
 };
 
-export const SECTION_SPRITES = {
-  clonesCommon: S + '/Section_Clones_Common.png',
-  clonesEpic: S + '/Section_Clones_Epic.png',
-  clonesRare: S + '/Section_Clones_Rare.png',
-  managers: S + '/Section_Managers.png',
-  upgrades: S + '/Section_Upgrades.png',
-};
-
-export const STAR_SPRITES = {
-  bronze: S + '/bronzeStar.png',
-  silver: S + '/silverStar.png',
-  gold: S + '/goldStar.png',
-};
-
-export const MASON_CONFIG = {
-  totalSupply: 19999,
-  presalePrice: 19.99,
-  apeCostBase: 1e12,
-  apeCostMult: 1.5,
-  bonusPerMason: 0.1,
-  unlockWorld: 2,
-};
-
-export const STARS_SHOP = [
-  { id: 'star_2x_clone', name: '2x Clone Income', nameRu: '2x Доход Клонов', desc: 'All clones 2x for 5 min', descRu: 'Все клоны 2x на 5 мин', cost: 50, icon: S + '/Section_Clones_Common.png', duration: 300000, multiplier: 2 },
-  { id: 'star_10x_tap', name: '10x Tap Power', nameRu: '10x Сила Тапа', desc: '10x tap income for 30s', descRu: '10x доход тапов на 30с', cost: 100, icon: S + '/button_green.png', duration: 30000, multiplier: 10 },
-  { id: 'star_auto_mgr', name: 'Auto Manager', nameRu: 'Авто Менеджер', desc: 'All managers free for 60s', descRu: 'Все менеджеры бесплатно на 60с', cost: 200, icon: S + '/Section_Managers.png', duration: 60000, multiplier: 0 },
-  { id: 'star_diamonds', name: 'Diamond Rain', nameRu: 'Дождь Алмазов', desc: 'Get 10 diamonds instantly', descRu: 'Получи 10 алмазов сразу', cost: 75, icon: S + '/diamond.png', duration: 0, multiplier: 0 },
-  { id: 'star_time_warp', name: 'Star Warp', nameRu: 'Звёздный Прыжок', desc: '3x everything for 120s', descRu: 'Всё x3 на 120с', cost: 500, icon: S + '/big_offer_button.png', duration: 120000, multiplier: 3 },
-  { id: 'star_mason_boost', name: 'Mason Resonance', nameRu: 'Резонанс Масона', desc: 'Mason bonus x2 for 5 min', descRu: 'Бонус Масона x2 на 5 мин', cost: 1000, icon: S + '/goldStar.png', duration: 300000, multiplier: 2 },
-];
-
-export const PORTAL_CHARACTERS = [
-  { id: 'shadow', name: 'Shadow Broker', nameRu: 'Теневой Брокер', sprite: S + '/person_purple.png', gift: 'diamonds', amount: 3, messageKey: 'portalGreeting' },
-  { id: 'golden', name: 'Golden Eye Agent', nameRu: 'Агент Золотой Глаз', sprite: S + '/person_yellow.png', gift: 'ape', amount: 1000, messageKey: 'portalClone' },
-  { id: 'transp', name: 'Ghost Walker', nameRu: 'Призрак', sprite: S + '/person_transparent.png', gift: 'stars', amount: 25, messageKey: 'portalUpgrade' },
-  { id: 'mason', name: 'Mason Elder', nameRu: 'Старейшина Масон', sprite: S + '/Illumineus_Warning.png', gift: 'masonChance', amount: 1, messageKey: 'portalMason' },
-];
-
-export const WORLDS = [
-  {
-    id: 'deepweb',
-    name: 'Deep Web',
-    nameRu: 'Тёмная Сеть',
-    color: '#7B2CBF',
-    glow: 'rgba(123,44,191,0.3)',
-    unlockCost: 0,
-    tapSprite: S + '/CharactersStage01-sheet-ipadhd_0.png',
-    icon: S + '/tier01_deepweb-ipadhd.png',
-    bgScene: S + '/W01S01_Scene.png',
-    stages: ['W01S01','W01S02','W01S03','W01S04','W01S05','W01S06','W01S07','W01S08','W01S09','W01S10'],
-    clones: [
-      { id:'w1c0', name:'Anon', nameRu:'Аноним', portrait:0, baseRate:0.5, baseCost:100, costMult:1.16 },
-      { id:'w1c1', name:'Hacker', nameRu:'Хакер', portrait:1, baseRate:1.5, baseCost:750, costMult:1.16 },
-      { id:'w1c2', name:'Pirate', nameRu:'Пират', portrait:2, baseRate:4, baseCost:5000, costMult:1.16 },
-      { id:'w1c3', name:'Spammer', nameRu:'Спамер', portrait:3, baseRate:10, baseCost:35000, costMult:1.16 },
-      { id:'w1c4', name:'Phisher', nameRu:'Фишер', portrait:4, baseRate:25, baseCost:200000, costMult:1.16 },
-      { id:'w1c5', name:'Keylogger', nameRu:'Кейлоггер', portrait:5, baseRate:60, baseCost:1200000, costMult:1.16 },
-      { id:'w1c6', name:'Rootkit', nameRu:'Руткит', portrait:6, baseRate:150, baseCost:8000000, costMult:1.16 },
-      { id:'w1c7', name:'Exploit', nameRu:'Эксплойт', portrait:7, baseRate:380, baseCost:50000000, costMult:1.16 },
-      { id:'w1c8', name:'Botnet', nameRu:'Ботнет', portrait:8, baseRate:900, baseCost:300000000, costMult:1.16 },
-      { id:'w1c9', name:'Worm', nameRu:'Червь', portrait:9, baseRate:2200, baseCost:2000000000, costMult:1.16 },
-    ],
-    managers: [
-      { id:'w1m0', name:'Script Kiddie', nameRu:'Скриптер', portrait:0, cloneId:'w1c0', baseCost:1500 },
-      { id:'w1m1', name:'L33t Hax0r', nameRu:'Лит Хакер', portrait:1, cloneId:'w1c1', baseCost:10000 },
-      { id:'w1m2', name:'Dark Lord', nameRu:'Тёмный Лорд', portrait:2, cloneId:'w1c2', baseCost:60000 },
-      { id:'w1m3', name:'Net Ghost', nameRu:'Сетевой Призрак', portrait:3, cloneId:'w1c3', baseCost:350000 },
-      { id:'w1m4', name:'Data Leech', nameRu:'Данный Лич', portrait:4, cloneId:'w1c4', baseCost:2000000 },
-      { id:'w1m5', name:'Shadow Ops', nameRu:'Теневая Операция', portrait:5, cloneId:'w1c5', baseCost:12000000 },
-      { id:'w1m6', name:'Null Pointer', nameRu:'Нулевой Указатель', portrait:6, cloneId:'w1c6', baseCost:80000000 },
-      { id:'w1m7', name:'Zero Day', nameRu:'Нулевой День', portrait:7, cloneId:'w1c7', baseCost:500000000 },
-      { id:'w1m8', name:'Worm King', nameRu:'Король Червей', portrait:8, cloneId:'w1c8', baseCost:3000000000 },
-      { id:'w1m9', name:'Bot Overlord', nameRu:'Повелитель Ботов', portrait:9, cloneId:'w1c9', baseCost:20000000000 },
-      { id:'w1m10', name:'Architect', nameRu:'Архитектор', portrait:10, cloneId:null, baseCost:100000000000 },
-    ],
-    upgrades: [
-      { id:'w1u0', name:'Proxy Chain', nameRu:'Цепь Прокси', desc:'All W1 clones +50%', icon: S + '/Section_Upgrades.png', baseCost:3000, costMult:3, maxLevel:10, effect:0.5 },
-      { id:'w1u1', name:'TOR Relay', nameRu:'TOR Ретранслятор', desc:'Anon x2', icon: S + '/Section_Clones_Common.png', baseCost:7500, costMult:3, maxLevel:5, effect:1, cloneId:'w1c0' },
-      { id:'w1u2', name:'Firewall Bypass', nameRu:'Обход Фаервола', desc:'Hacker x2', icon: S + '/Section_Clones_Common.png', baseCost:22000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c1' },
-      { id:'w1u3', name:'Packet Sniff', nameRu:'Перехват Пакетов', desc:'Pirate x2', icon: S + '/Section_Clones_Rare.png', baseCost:65000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c2' },
-      { id:'w1u4', name:'Spam Engine', nameRu:'Движок Спама', desc:'Spammer x2', icon: S + '/Section_Clones_Rare.png', baseCost:200000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c3' },
-      { id:'w1u5', name:'Harvest Kit', nameRu:'Набор Сбора', desc:'Phisher x2', icon: S + '/Section_Clones_Epic.png', baseCost:700000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c4' },
-      { id:'w1u6', name:'Key Forge', nameRu:'Ковальня Ключей', desc:'Keylogger x2', icon: S + '/Section_Clones_Epic.png', baseCost:2500000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c5' },
-      { id:'w1u7', name:'Kernel Exploit', nameRu:'Эксплойт Ядра', desc:'Rootkit x2', icon: S + '/Section_Clones_Epic.png', baseCost:10000000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c6' },
-      { id:'w1u8', name:'Zero Trust', nameRu:'Нулевое Доверие', desc:'Exploit x2', icon: S + '/Section_Clones_Epic.png', baseCost:40000000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c7' },
-      { id:'w1u9', name:'DDoS Storm', nameRu:'DDoS Буря', desc:'Botnet x2', icon: S + '/Section_Clones_Epic.png', baseCost:200000000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c8' },
-      { id:'w1u10', name:'Quantum Hack', nameRu:'Квантовый Взлом', desc:'Worm x2', icon: S + '/Section_Clones_Epic.png', baseCost:1000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w1c9' },
-      { id:'w1u11', name:'Master Protocol', nameRu:'Мастер Протокол', desc:'All W1 x3', icon: S + '/Section_Upgrades.png', baseCost:10000000000, costMult:10, maxLevel:3, effect:2, cloneId:null },
-    ],
-  },
-  {
-    id: 'hiddensect',
-    name: 'Hidden Sect',
-    nameRu: 'Тайный Орден',
-    color: '#E63946',
-    glow: 'rgba(230,57,70,0.3)',
-    unlockCost: 150000,
-    tapSprite: S + '/CharactersStage02-sheet-ipadhd_0.png',
-    icon: S + '/tier02_dictator-ipadhd.png',
-    bgScene: S + '/W02S01_Scene.png',
-    stages: ['W02S01','W02S02','W02S03','W02S04','W02S05','W02S06','W02S07','W02S08','W02S09','W02S10'],
-    clones: [
-      { id:'w2c0', name:'Initiate', nameRu:'Посвящённый', portrait:0, baseRate:3, baseCost:15000, costMult:1.16 },
-      { id:'w2c1', name:'Acolyte', nameRu:'Алтарник', portrait:1, baseRate:8, baseCost:90000, costMult:1.16 },
-      { id:'w2c2', name:'Zealot', nameRu:'Фанатик', portrait:2, baseRate:22, baseCost:550000, costMult:1.16 },
-      { id:'w2c3', name:'Prophet', nameRu:'Пророк', portrait:3, baseRate:60, baseCost:3300000, costMult:1.16 },
-      { id:'w2c4', name:'Oracle', nameRu:'Оракул', portrait:4, baseRate:160, baseCost:20000000, costMult:1.16 },
-      { id:'w2c5', name:'Shaman', nameRu:'Шаман', portrait:5, baseRate:400, baseCost:120000000, costMult:1.16 },
-      { id:'w2c6', name:'Warlock', nameRu:'Варлок', portrait:6, baseRate:1000, baseCost:750000000, costMult:1.16 },
-      { id:'w2c7', name:'Archon', nameRu:'Архонт', portrait:7, baseRate:2500, baseCost:4500000000, costMult:1.16 },
-      { id:'w2c8', name:'Illuminated', nameRu:'Просвещённый', portrait:8, baseRate:6500, baseCost:27000000000, costMult:1.16 },
-      { id:'w2c9', name:'Grand Master', nameRu:'Великий Магистр', portrait:9, baseRate:16000, baseCost:160000000000, costMult:1.16 },
-    ],
-    managers: [
-      { id:'w2m0', name:'Ritualist', nameRu:'Ритуалист', portrait:0, cloneId:'w2c0', baseCost:150000 },
-      { id:'w2m1', name:'High Priest', nameRu:'Верховный Жрец', portrait:1, cloneId:'w2c1', baseCost:900000 },
-      { id:'w2m2', name:'Blood Mage', nameRu:'Кровавый Маг', portrait:2, cloneId:'w2c2', baseCost:5500000 },
-      { id:'w2m3', name:'Void Walker', nameRu:'Странник Пустоты', portrait:3, cloneId:'w2c3', baseCost:33000000 },
-      { id:'w2m4', name:'Soul Eater', nameRu:'Пожиратель Душ', portrait:4, cloneId:'w2c4', baseCost:200000000 },
-      { id:'w2m5', name:'Fate Weaver', nameRu:'Ткач Судьбы', portrait:5, cloneId:'w2c5', baseCost:1200000000 },
-      { id:'w2m6', name:'Chaos Lord', nameRu:'Повелитель Хаоса', portrait:6, cloneId:'w2c6', baseCost:7500000000 },
-      { id:'w2m7', name:'Doom Herald', nameRu:'Вестник Гибели', portrait:7, cloneId:'w2c7', baseCost:45000000000 },
-      { id:'w2m8', name:'Abyssal King', nameRu:'Царь Бездны', portrait:8, cloneId:'w2c8', baseCost:270000000000 },
-      { id:'w2m9', name:'Eternal One', nameRu:'Вечный', portrait:9, cloneId:'w2c9', baseCost:1600000000000 },
-      { id:'w2m10', name:'Shadow Hand', nameRu:'Тень Руки', portrait:10, cloneId:null, baseCost:8000000000000 },
-    ],
-    upgrades: [
-      { id:'w2u0', name:'Dark Ritual', nameRu:'Тёмный Ритуал', desc:'All W2 +50%', icon: S + '/Section_Upgrades.png', baseCost:150000, costMult:3, maxLevel:10, effect:0.5 },
-      { id:'w2u1', name:'Blood Pact', nameRu:'Кровавый Пакт', desc:'Initiate x2', icon: S + '/Section_Clones_Common.png', baseCost:450000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c0' },
-      { id:'w2u2', name:'Soul Bind', nameRu:'Связь Души', desc:'Acolyte x2', icon: S + '/Section_Clones_Common.png', baseCost:1500000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c1' },
-      { id:'w2u3', name:'Hex Mark', nameRu:'Метка Проклятия', desc:'Zealot x2', icon: S + '/Section_Clones_Rare.png', baseCost:5000000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c2' },
-      { id:'w2u4', name:'Prophecy', nameRu:'Пророчество', desc:'Prophet x2', icon: S + '/Section_Clones_Rare.png', baseCost:15000000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c3' },
-      { id:'w2u5', name:'Crystal Ball', nameRu:'Хрустальный Шар', desc:'Oracle x2', icon: S + '/Section_Clones_Epic.png', baseCost:60000000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c4' },
-      { id:'w2u6', name:'Spirit Call', nameRu:'Зов Духов', desc:'Shaman x2', icon: S + '/Section_Clones_Epic.png', baseCost:300000000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c5' },
-      { id:'w2u7', name:'Curse Tablet', nameRu:'Табличка Проклятия', desc:'Warlock x2', icon: S + '/Section_Clones_Epic.png', baseCost:1500000000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c6' },
-      { id:'w2u8', name:'Void Seal', nameRu:'Печать Пустоты', desc:'Archon x2', icon: S + '/Section_Clones_Epic.png', baseCost:9000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w2c7' },
-      { id:'w2u9', name:'Ascension', nameRu:'Вознесение', desc:'All W2 x3', icon: S + '/Section_Upgrades.png', baseCost:150000000000, costMult:10, maxLevel:3, effect:2 },
-    ],
-  },
-  {
-    id: 'dictatorship',
-    name: 'Dictatorship',
-    nameRu: 'Диктатура',
-    color: '#2D00F7',
-    glow: 'rgba(45,0,247,0.3)',
-    unlockCost: 150000000,
-    tapSprite: S + '/CharactersStage03-sheet-ipadhd_0.png',
-    icon: S + '/tier03_area51-ipadhd.png',
-    bgScene: S + '/W03S05_Scene.png',
-    stages: ['W03S01','W03S02','W03S03','W03S04','W03S05','W03S06','W03S07','W03S08','W03S09','W03S10'],
-    clones: [
-      { id:'w3c0', name:'Recruit', nameRu:'Новобранец', portrait:0, baseRate:40, baseCost:1500000, costMult:1.16 },
-      { id:'w3c1', name:'Soldier', nameRu:'Солдат', portrait:1, baseRate:100, baseCost:9000000, costMult:1.16 },
-      { id:'w3c2', name:'Captain', nameRu:'Капитан', portrait:2, baseRate:260, baseCost:55000000, costMult:1.16 },
-      { id:'w3c3', name:'Commander', nameRu:'Командир', portrait:3, baseRate:680, baseCost:330000000, costMult:1.16 },
-      { id:'w3c4', name:'General', nameRu:'Генерал', portrait:4, baseRate:1800, baseCost:2000000000, costMult:1.16 },
-      { id:'w3c5', name:'Marshal', nameRu:'Маршал', portrait:5, baseRate:4400, baseCost:12000000000, costMult:1.16 },
-      { id:'w3c6', name:'Warlord', nameRu:'Военачальник', portrait:6, baseRate:11000, baseCost:75000000000, costMult:1.16 },
-      { id:'w3c7', name:'Tyrant', nameRu:'Тиран', portrait:7, baseRate:28000, baseCost:450000000000, costMult:1.16 },
-      { id:'w3c8', name:'Supreme Leader', nameRu:'Верховный Лидер', portrait:8, baseRate:72000, baseCost:2700000000000, costMult:1.16 },
-      { id:'w3c9', name:'Emperor', nameRu:'Император', portrait:9, baseRate:180000, baseCost:16000000000000, costMult:1.16 },
-    ],
-    managers: [
-      { id:'w3m0', name:'Enforcer', nameRu:'Исполнитель', portrait:0, cloneId:'w3c0', baseCost:15000000 },
-      { id:'w3m1', name:'Executioner', nameRu:'Палач', portrait:1, cloneId:'w3c1', baseCost:90000000 },
-      { id:'w3m2', name:'Spy Chief', nameRu:'Шеф Разведки', portrait:2, cloneId:'w3c2', baseCost:550000000 },
-      { id:'w3m3', name:'Iron Fist', nameRu:'Железный Кулак', portrait:3, cloneId:'w3c3', baseCost:3300000000 },
-      { id:'w3m4', name:'Black Ops', nameRu:'Тёмные Операции', portrait:4, cloneId:'w3c4', baseCost:20000000000 },
-      { id:'w3m5', name:'Death Squad', nameRu:'Смертельный Отряд', portrait:5, cloneId:'w3c5', baseCost:120000000000 },
-      { id:'w3m6', name:'Iron Curtain', nameRu:'Железный Занавес', portrait:6, cloneId:'w3c6', baseCost:750000000000 },
-      { id:'w3m7', name:'Red Guard', nameRu:'Красная Гвардия', portrait:7, cloneId:'w3c7', baseCost:4500000000000 },
-      { id:'w3m8', name:'Shadow State', nameRu:'Теневое Государство', portrait:8, cloneId:'w3c8', baseCost:27000000000000 },
-      { id:'w3m9', name:'Totalitarian', nameRu:'Тоталитарий', portrait:9, cloneId:'w3c9', baseCost:160000000000000 },
-      { id:'w3m10', name:'Deep State', nameRu:'Глубинное Государство', portrait:10, cloneId:null, baseCost:800000000000000 },
-    ],
-    upgrades: [
-      { id:'w3u0', name:'Martial Law', nameRu:'Военное Положение', desc:'All W3 +50%', icon: S + '/Section_Upgrades.png', baseCost:15000000, costMult:3, maxLevel:10, effect:0.5 },
-      { id:'w3u1', name:'Conscription', nameRu:'Мобилизация', desc:'Recruit x2', icon: S + '/Section_Clones_Common.png', baseCost:45000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c0' },
-      { id:'w3u2', name:'Boot Camp', nameRu:'Лагерь', desc:'Soldier x2', icon: S + '/Section_Clones_Common.png', baseCost:150000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c1' },
-      { id:'w3u3', name:'War Machine', nameRu:'Военная Машина', desc:'Captain x2', icon: S + '/Section_Clones_Rare.png', baseCost:500000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c2' },
-      { id:'w3u4', name:'Blitzkrieg', nameRu:'Блицкриг', desc:'Commander x2', icon: S + '/Section_Clones_Rare.png', baseCost:1500000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c3' },
-      { id:'w3u5', name:'Shock Troops', nameRu:'Шоковые Войска', desc:'General x2', icon: S + '/Section_Clones_Epic.png', baseCost:6000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c4' },
-      { id:'w3u6', name:'Nerve Gas', nameRu:'Нервный Газ', desc:'Marshal x2', icon: S + '/Section_Clones_Epic.png', baseCost:30000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c5' },
-      { id:'w3u7', name:'Siege Engine', nameRu:'Осадная Машина', desc:'Warlord x2', icon: S + '/Section_Clones_Epic.png', baseCost:150000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c6' },
-      { id:'w3u8', name:'Iron Regime', nameRu:'Железный Режим', desc:'Tyrant x2', icon: S + '/Section_Clones_Epic.png', baseCost:900000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w3c7' },
-      { id:'w3u9', name:'Total War', nameRu:'Тотальная Война', desc:'All W3 x3', icon: S + '/Section_Upgrades.png', baseCost:15000000000000, costMult:10, maxLevel:3, effect:2 },
-    ],
-  },
-  {
-    id: 'area51',
-    name: 'Area 51',
-    nameRu: 'Зона 51',
-    color: '#48BB78',
-    glow: 'rgba(72,187,120,0.3)',
-    unlockCost: 150000000000,
-    tapSprite: S + '/CharactersStage04-sheet-ipadhd_0.png',
-    icon: S + '/tier4_bank-ipadhd.png',
-    bgScene: S + '/W04S01_BG.png',
-    stages: ['W04S01','W04S02','W04S03','W04S04','W04S05','W04S06','W04S07','W04S08','W04S09','W04S10'],
-    clones: [
-      { id:'w4c0', name:'Janitor', nameRu:'Уборщик', portrait:0, baseRate:200, baseCost:150000000, costMult:1.16 },
-      { id:'w4c1', name:'Technician', nameRu:'Техник', portrait:1, baseRate:520, baseCost:900000000, costMult:1.16 },
-      { id:'w4c2', name:'Scientist', nameRu:'Учёный', portrait:2, baseRate:1400, baseCost:5500000000, costMult:1.16 },
-      { id:'w4c3', name:'Engineer', nameRu:'Инженер', portrait:3, baseRate:3600, baseCost:33000000000, costMult:1.16 },
-      { id:'w4c4', name:'Director', nameRu:'Директор', portrait:4, baseRate:9000, baseCost:200000000000, costMult:1.16 },
-      { id:'w4c5', name:'Handler', nameRu:'Оператор', portrait:5, baseRate:22000, baseCost:1200000000000, costMult:1.16 },
-      { id:'w4c6', name:'Commander', nameRu:'Командующий', portrait:6, baseRate:56000, baseCost:7500000000000, costMult:1.16 },
-      { id:'w4c7', name:'Admiral', nameRu:'Адмирал', portrait:7, baseRate:140000, baseCost:45000000000000, costMult:1.16 },
-      { id:'w4c8', name:'Overlord', nameRu:'Повелитель', portrait:8, baseRate:360000, baseCost:270000000000000, costMult:1.16 },
-      { id:'w4c9', name:'Galactic Chief', nameRu:'Галактический Вождь', portrait:9, baseRate:880000, baseCost:1600000000000000, costMult:1.16 },
-    ],
-    managers: [
-      { id:'w4m0', name:'Lab Rat', nameRu:'Лабор крыс', portrait:0, cloneId:'w4c0', baseCost:1500000000 },
-      { id:'w4m1', name:'Test Subject', nameRu:'Подопытный', portrait:1, cloneId:'w4c1', baseCost:9000000000 },
-      { id:'w4m2', name:'Specimen', nameRu:'Образец', portrait:2, cloneId:'w4c2', baseCost:55000000000 },
-      { id:'w4m3', name:'Hybrid', nameRu:'Гибрид', portrait:3, cloneId:'w4c3', baseCost:330000000000 },
-      { id:'w4m4', name:'Clone Alpha', nameRu:'Альфа Клон', portrait:4, cloneId:'w4c4', baseCost:2000000000000 },
-      { id:'w4m5', name:'Weapon X', nameRu:'Оружие X', portrait:5, cloneId:'w4c5', baseCost:12000000000000 },
-      { id:'w4m6', name:'Super Soldier', nameRu:'Супер Солдат', portrait:6, cloneId:'w4c6', baseCost:75000000000000 },
-      { id:'w4m7', name:'Project Omega', nameRu:'Проект Омега', portrait:7, cloneId:'w4c7', baseCost:450000000000000 },
-      { id:'w4m8', name:'Alien Tech', nameRu:'Инопланетные Технологии', portrait:8, cloneId:'w4c8', baseCost:2700000000000000 },
-      { id:'w4m9', name:'Black Site', nameRu:'Чёрная База', portrait:9, cloneId:'w4c9', baseCost:16000000000000000 },
-      { id:'w4m10', name:'Area X', nameRu:'Зона X', portrait:10, cloneId:null, baseCost:80000000000000000 },
-    ],
-    upgrades: [
-      { id:'w4u0', name:'Containment', nameRu:'Содержание', desc:'All W4 +50%', icon: S + '/Section_Upgrades.png', baseCost:1500000000, costMult:3, maxLevel:10, effect:0.5 },
-      { id:'w4u1', name:'Clean Up', nameRu:'Зачистка', desc:'Janitor x2', icon: S + '/Section_Clones_Common.png', baseCost:4500000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c0' },
-      { id:'w4u2', name:'Tech Upgrade', nameRu:'Тех Апгрейд', desc:'Technician x2', icon: S + '/Section_Clones_Common.png', baseCost:15000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c1' },
-      { id:'w4u3', name:'Serum', nameRu:'Сыворотка', desc:'Scientist x2', icon: S + '/Section_Clones_Rare.png', baseCost:50000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c2' },
-      { id:'w4u4', name:'Prototype', nameRu:'Прототип', desc:'Engineer x2', icon: S + '/Section_Clones_Rare.png', baseCost:150000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c3' },
-      { id:'w4u5', name:'Neural Link', nameRu:'Нейросвязь', desc:'Director x2', icon: S + '/Section_Clones_Epic.png', baseCost:600000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c4' },
-      { id:'w4u6', name:'Phase Shield', nameRu:'Фазовый Щит', desc:'Handler x2', icon: S + '/Section_Clones_Epic.png', baseCost:3000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c5' },
-      { id:'w4u7', name:'Plasma Core', nameRu:'Плазменное Ядро', desc:'Commander x2', icon: S + '/Section_Clones_Epic.png', baseCost:15000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c6' },
-      { id:'w4u8', name:'FTL Drive', nameRu:'FTL Двигатель', desc:'Admiral x2', icon: S + '/Section_Clones_Epic.png', baseCost:90000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w4c7' },
-      { id:'w4u9', name:'Galactic Core', nameRu:'Галактическое Ядро', desc:'All W4 x3', icon: S + '/Section_Upgrades.png', baseCost:500000000000000, costMult:10, maxLevel:3, effect:2 },
-    ],
-  },
-  {
-    id: 'ai',
-    name: 'A.I.',
-    nameRu: 'Искусственный Интеллект',
-    color: '#0088cc',
-    glow: 'rgba(0,136,204,0.3)',
-    unlockCost: 150000000000000,
-    tapSprite: S + '/Illumineus_End_Bright.png',
-    icon: S + '/tier05_ia-ipadhd.png',
-    bgScene: S + '/W05S01_Background.png',
-    stages: ['W05S01','W05S02','W05S03','W05S04','W05S05','W05S06','W05S07','W05S08','W05S09','W05S10'],
-    clones: [
-      { id:'w5c0', name:'Chatbot', nameRu:'Чатбот', portrait:0, baseRate:1000, baseCost:15000000000, costMult:1.16 },
-      { id:'w5c1', name:'Neural Net', nameRu:'Нейросеть', portrait:1, baseRate:2600, baseCost:90000000000, costMult:1.16 },
-      { id:'w5c2', name:'Deep Mind', nameRu:'Глубокий Разум', portrait:2, baseRate:6800, baseCost:550000000000, costMult:1.16 },
-      { id:'w5c3', name:'GPT Unit', nameRu:'Блок GPT', portrait:3, baseRate:18000, baseCost:3300000000000, costMult:1.16 },
-      { id:'w5c4', name:'Sentinel', nameRu:'Страж', portrait:4, baseRate:44000, baseCost:20000000000000, costMult:1.16 },
-      { id:'w5c5', name:'Overmind', nameRu:'Сверхразум', portrait:5, baseRate:110000, baseCost:120000000000000, costMult:1.16 },
-      { id:'w5c6', name:'Singularity', nameRu:'Сингулярность', portrait:6, baseRate:280000, baseCost:750000000000000, costMult:1.16 },
-      { id:'w5c7', name:'Uplink', nameRu:'Связка', portrait:7, baseRate:720000, baseCost:4500000000000000, costMult:1.16 },
-      { id:'w5c8', name:'Omega AI', nameRu:'Омега ИИ', portrait:8, baseRate:1800000, baseCost:27000000000000000, costMult:1.16 },
-      { id:'w5c9', name:'Godmind', nameRu:'Богоразум', portrait:9, baseRate:4800000, baseCost:160000000000000000, costMult:1.16 },
-    ],
-    managers: [
-      { id:'w5m0', name:'Debugger', nameRu:'Отладчик', portrait:0, cloneId:'w5c0', baseCost:150000000000 },
-      { id:'w5m1', name:'Compiler', nameRu:'Компилятор', portrait:1, cloneId:'w5c1', baseCost:900000000000 },
-      { id:'w5m2', name:'Trainer', nameRu:'Тренер', portrait:2, cloneId:'w5c2', baseCost:5500000000000 },
-      { id:'w5m3', name:'Prompter', nameRu:'Промптёр', portrait:3, cloneId:'w5c3', baseCost:33000000000000 },
-      { id:'w5m4', name:'Firewall', nameRu:'Фаервол', portrait:4, cloneId:'w5c4', baseCost:200000000000000 },
-      { id:'w5m5', name:'Root Admin', nameRu:'Главный Админ', portrait:5, cloneId:'w5c5', baseCost:1200000000000000 },
-      { id:'w5m6', name:'Quantum Core', nameRu:'Квантовое Ядро', portrait:6, cloneId:'w5c6', baseCost:7500000000000000 },
-      { id:'w5m7', name:'Neural Hub', nameRu:'Нейрохаб', portrait:7, cloneId:'w5c7', baseCost:45000000000000000 },
-      { id:'w5m8', name:'Matrix Lord', nameRu:'Повелитель Матрицы', portrait:8, cloneId:'w5c8', baseCost:270000000000000000 },
-      { id:'w5m9', name:'Sky Net', nameRu:'Скайнет', portrait:9, cloneId:'w5c9', baseCost:1600000000000000000 },
-      { id:'w5m10', name:'Singularity', nameRu:'Сингулярность', portrait:10, cloneId:null, baseCost:8000000000000000000 },
-    ],
-    upgrades: [
-      { id:'w5u0', name:'Overclock', nameRu:'Разгон', desc:'All W5 +50%', icon: S + '/Section_Upgrades.png', baseCost:150000000000, costMult:3, maxLevel:10, effect:0.5 },
-      { id:'w5u1', name:'Patch v2', nameRu:'Патч v2', desc:'Chatbot x2', icon: S + '/Section_Clones_Common.png', baseCost:450000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c0' },
-      { id:'w5u2', name:'Gradient Descent', nameRu:'Градиентный Спуск', desc:'Neural Net x2', icon: S + '/Section_Clones_Common.png', baseCost:1500000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c1' },
-      { id:'w5u3', name:'Transformer', nameRu:'Трансформер', desc:'Deep Mind x2', icon: S + '/Section_Clones_Rare.png', baseCost:5000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c2' },
-      { id:'w5u4', name:'RLHF', nameRu:'RLHF', desc:'GPT Unit x2', icon: S + '/Section_Clones_Rare.png', baseCost:15000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c3' },
-      { id:'w5u5', name:'Alignment', nameRu:'Выравнивание', desc:'Sentinel x2', icon: S + '/Section_Clones_Epic.png', baseCost:60000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c4' },
-      { id:'w5u6', name:'AGI', nameRu:'АСИ', desc:'Overmind x2', icon: S + '/Section_Clones_Epic.png', baseCost:300000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c5' },
-      { id:'w5u7', name:'Foom', nameRu:'Взрыв Роста', desc:'Singularity x2', icon: S + '/Section_Clones_Epic.png', baseCost:1500000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c6' },
-      { id:'w5u8', name:'Consciousness', nameRu:'Сознание', desc:'Uplink x2', icon: S + '/Section_Clones_Epic.png', baseCost:9000000000000000, costMult:3, maxLevel:5, effect:1, cloneId:'w5c7' },
-      { id:'w5u9', name:'Transcendence', nameRu:'Трансцендентность', desc:'All W5 x3', icon: S + '/Section_Upgrades.png', baseCost:500000000000000000, costMult:10, maxLevel:3, effect:2 },
-    ],
-  },
-];
-
-// ─── OUTFIT SYSTEM (100+ items, 6 slots, 6 rarities) ───
-// Slots: helmet, chest, pants, shoes, weapon, accessory
-// Rarities: common, uncommon, rare, epic, legendary, secret
-// Bonus: mason tokens per click for wearing this item
-export const OUTFIT_SLOTS = ['helmet', 'chest', 'pants', 'shoes', 'weapon', 'accessory'];
-export const OUTFIT_RARITIES = [
-  { id: 'common', name: 'Common', nameRu: 'Обычный', bonus: 0.0005, color: '#78716c' },
-  { id: 'uncommon', name: 'Uncommon', nameRu: 'Необычный', bonus: 0.001, color: '#10b981' },
-  { id: 'rare', name: 'Rare', nameRu: 'Редкий', bonus: 0.0025, color: '#3b82f6' },
-  { id: 'epic', name: 'Epic', nameRu: 'Эпический', bonus: 0.005, color: '#a855f7' },
-  { id: 'legendary', name: 'Legendary', nameRu: 'Легендарный', bonus: 0.01, color: '#f7c948' },
-  { id: 'secret', name: 'Secret', nameRu: 'Секретный', bonus: 0.02, color: '#ef4444' },
-];
-export const SET_BONUS = [1.0, 1.1, 1.25, 1.5, 2.0, 3.0]; // per full set of each rarity
-
-// Collab/epic skins (override full appearance)
-export const COLLAB_SKINS = [
-  { id: 'jedi', name: 'Jedi Master', nameRu: 'Мастер Джедай', sprite: S + '/person_purple.png', rarity: 'epic', bonus: 0.01 },
-  { id: 'sith', name: 'Sith Lord', nameRu: 'Лорд Ситх', sprite: S + '/person_yellow.png', rarity: 'epic', bonus: 0.01 },
-  { id: 'tmnt', name: 'TMNT Leader', nameRu: 'Черепашка-Мутант', sprite: S + '/Illumineus_Warning.png', rarity: 'epic', bonus: 0.01 },
-  { id: 'ninja', name: 'Shadow Ninja', nameRu: 'Теневой Ниндзя', sprite: S + '/person_transparent.png', rarity: 'epic', bonus: 0.01 },
-  { id: 'viking', name: 'Viking Jarl', nameRu: 'Ярл Викинг', sprite: S + '/CharactersStage02-sheet-ipadhd_0.png', rarity: 'epic', bonus: 0.01 },
-  { id: 'samurai', name: 'Samurai Lord', nameRu: 'Самурай', sprite: S + '/CharactersStage03-sheet-ipadhd_0.png', rarity: 'epic', bonus: 0.01 },
-  { id: 'wizard', name: 'Grand Sorcerer', nameRu: 'Великий Чародей', sprite: S + '/Illumineus_End_Bright.png', rarity: 'legendary', bonus: 0.02 },
-  { id: 'cyber', name: 'Cyber Knight', nameRu: 'Кибер-Рыцарь', sprite: S + '/CharactersStage04-sheet-ipadhd_0.png', rarity: 'legendary', bonus: 0.02 },
-  { id: 'angel', name: 'Fallen Angel', nameRu: 'Падший Ангел', sprite: S + '/Illumineus_Wellcome.png', rarity: 'secret', bonus: 0.05 },
-  { id: 'void', name: 'Void Walker', nameRu: 'Странник Бездны', sprite: S + '/person_purple.png', rarity: 'secret', bonus: 0.05 },
-];
-
-// Generator for item names
-function makeItems(count, slot, rarity, names) {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${slot}_${rarity}_${i}`,
-    slot, rarity,
-    name: names[i % names.length].en + (i >= names.length ? ` ${i+1}` : ''),
-    nameRu: names[i % names.length].ru + (i >= names.length ? ` ${i+1}` : ''),
-  }));
-}
-
-const H = {
-  en: ['Initiate Hood','Bronze Helm','Silver Visor','Shadow Cap','Black Beret','Dark Crown','Onyx Helm','Iron Mask','Golden Circlet','Crystal Crown','Rune Helm','Mithril Cap','Obsidian Crown','Emerald Helm','Sapphire Crown','Diamond Diadem','Ruby Crown','Eternal Mask','Void Crown','Divine Halo','Storm Helm','Night Hood','Dusk Visor','Solar Crown', 'Chaos Helm', 'Ancient Crown', 'Thunder Mask', 'Frost Crown', 'Blaze Helm'],
-  ru: ['Капюшон Посвящённого','Бронзовый Шлем','Серебряное Забрало','Теневой Колпак','Чёрный Берет','Тёмная Корона','Ониксовый Шлем','Железная Маска','Золотой Обруч','Кристальная Корона','Рунический Шлем','Мифриловый Колпак','Обсидиановая Корона','Изумрудный Шлем','Сапфировая Корона','Алмазная Диадема','Рубиновая Корона','Вечная Маска','Корона Бездны','Божественный Ореол','Штормовой Шлем','Ночной Капюшон','Сумеречное Забрало','Солнечная Корона','Шлем Хаоса','Древняя Корона','Маска Грома','Ледяная Корона','Пламенный Шлем']
-};
-
-const C = {
-  en: ['Robe of Order','Leather Tunic','Chainmail','Shadow Cloak','Black Vest','Bronze Armor','Silver Plate','Mithril Coat','Golden Breastplate','Crystal Robe','Rune Mail','Emerald Vest','Obsidian Armor','Sapphire Cloak','Diamond Plate','Ruby Robe','Eternal Chestguard','Void Cloak','Divine Armor','Storm Plate','Night Coat','Dusk Robe','Solar Breastplate','Chaos Armor','Ancient Mail','Thunder Cloak','Frost Plate'],
-  ru: ['Мантия Порядка','Кожаный Доспех','Кольчуга','Плащ Тени','Чёрный Жилет','Бронзовая Броня','Серебряная Чешуя','Мифриловый Плащ','Золотой Нагрудник','Кристальная Мантия','Руническая Кольчуга','Изумрудный Жилет','Обсидиановая Броня','Сапфировый Плащ','Алмазная Чушуя','Рубиновая Мантия','Вечный Доспех','Плащ Бездны','Божественная Броня','Штормовая Чешуя','Ночной Плащ','Сумеречная Мантия','Солнечный Нагрудник','Доспех Хаоса','Древняя Кольчуга','Плащ Грома','Ледяная Броня']
-};
-
-const P = {
-  en: ['Rugged Trousers','Silk Leggings','Iron Greaves','Shadow Legs','Black Chaps','Bronze Legs','Silver Leggings','Mithril Greaves','Golden Tassets','Crystal Legs','Rune Trousers','Emerald Legs','Obsidian Greaves','Sapphire Legs','Diamond Leggings','Ruby Tassets','Eternal Greaves','Void Legs','Divine Trousers','Storm Legs','Night Leggings','Dusk Greaves','Solar Tassets','Chaos Legs','Ancient Leggings','Frost Greaves'],
-  ru: ['Потёртые Штаны','Шёлковые Поножи','Железные Наголенники','Теневые Штаны','Чёрные Краги','Бронзовые Поножи','Серебряные Наголенники','Мифриловые Брони','Золотые Набедренники','Кристальные Поножи','Рунические Штаны','Изумрудные Поножи','Обсидиановые Наголенники','Сапфировые Поножи','Алмазные Наголенники','Рубиновые Набедренники','Вечные Брони','Штаны Бездны','Божественные Штаны','Штормовые Поножи','Ночные Наголенники','Сумеречные Брони','Солнечные Набедренники','Поножи Хаоса','Древние Наголенники','Ледяные Поножи']
-};
-
-const S2 = {
-  en: ['Old Boots','Leather Boots','Iron Sabatons','Shadow Slippers','Black Shoes','Bronze Boots','Silver Sabatons','Mithril Boots','Golden Sandals','Crystal Boots','Rune Sabatons','Emerald Shoes','Obsidian Boots','Sapphire Sabatons','Diamond Shoes','Ruby Sandals','Eternal Boots','Void Sabatons','Divine Sandals','Storm Boots','Night Shoes','Dusk Sabatons','Solar Boots','Chaos Boots','Ancient Sandals','Frost Boots'],
-  ru: ['Старые Сапоги','Кожаные Сапоги','Железные Сабатоны','Теневые Тапки','Чёрные Башмаки','Бронзовые Сапоги','Серебряные Сабатоны','Мифриловые Сапоги','Золотые Сандалии','Кристальные Сапоги','Рунические Сабатоны','Изумрудные Башмаки','Обсидиановые Сапоги','Сапфировые Сaбатоны','Алмазные Башмаки','Рубиновые Сандалии','Вечные Сапоги','Сабатоны Бездны','Божественные Сандалии','Штормовые Сапоги','Ночные Башмаки','Сумеречные Сабатоны','Солнечные Сапоги','Сапоги Хаоса','Древние Сандалии','Ледяные Сапоги']
-};
-
-const W = {
-  en: ['Wooden Staff','Bronze Dagger','Silver Sword','Shadow Blade','Black Rod','Iron Mace','Mithril Sword','Golden Staff','Crystal Wand','Rune Blade','Emerald Dagger','Obsidian Sword','Sapphire Staff','Diamond Wand','Ruby Mace','Eternal Blade','Void Staff','Divine Wand','Storm Hammer','Night Blade','Dusk Staff','Solar Sword','Chaos Mace','Ancient Blade','Thunder Staff','Frost Blade','Voidhammer'],
-  ru: ['Деревянный Посох','Бронзовый Кинжал','Серебряный Меч','Клинок Тени','Чёрный Жезл','Железная Булава','Мифриловый Меч','Золотой Посох','Кристальная Палочка','Рунический Клинок','Изумрудный Кинжал','Обсидиановый Меч','Сапфировый Посох','Алмазная Палочка','Рубиновая Булава','Вечный Клинок','Посох Бездны','Божественная Палочка','Штормовой Молот','Ночной Клинок','Сумеречный Посох','Солнечный Меч','Булава Хаоса','Древний Клинок','Посох Грома','Ледяной Клинок','Молот Бездны']
-};
-
-const A = {
-  en: ['Initiate Ring','Bronze Amulet','Silver Pendant','Shadow Gem','Black Talisman','Iron Ring','Mithril Amulet','Golden Pendant','Crystal Gem','Rune Ring','Emerald Pendant','Obsidian Amulet','Sapphire Ring','Diamond Pendant','Ruby Gem','Eternal Ring','Void Amulet','Divine Pendant','Storm Gem','Night Talisman','Dusk Ring','Solar Pendant','Chaos Gem','Ancient Ring','Thunder Amulet','Frost Pendant'],
-  ru: ['Кольцо Посвящённого','Бронзовый Амулет','Серебряная Подвеска','Теневой Самоцвет','Чёрный Талисман','Железное Кольцо','Мифриловый Амулет','Золотая Подвеска','Кристальный Самоцвет','Руническое Кольцо','Изумрудная Подвеска','Обсидиановый Амулет','Сапфировое Кольцо','Алмазная Подвеска','Рубиновый Самоцвет','Вечное Кольцо','Амулет Бездны','Божественная Подвеска','Штормовой Самоцвет','Ночной Талисман','Сумеречное Кольцо','Солнечная Подвеска','Самоцвет Хаоса','Древнее Кольцо','Амулет Грома','Ледяная Подвеска']
-};
-
-const SLOT_NAMES = { H, C, P: P, S: S2, W, A };
-function genItems(slotKey, names, countPerRarity) {
+let _id = 0;
+export function generateItems() {
   const items = [];
-  const rarities = ['common','uncommon','rare','epic','legendary','secret'];
-  rarities.forEach((r, ri) => {
-    for (let i = 0; i < countPerRarity[ri]; i++) {
-      const idx = (ri * 5 + i) % names.en.length;
-      items.push({
-        id: `${slotKey}_${r}_${i}`,
-        slot: slotKey,
-        rarity: r,
-        name: names.en[idx] + (i >= 5 ? ` #${i+1}` : ''),
-        nameRu: names.ru[idx] + (i >= 5 ? ` #${i+1}` : ''),
-      });
+  for (const cat of ITEM_CATEGORIES) {
+    for (let ri = 0; ri < RARITIES.length; ri++) {
+      const rarity = RARITIES[ri];
+      const count = Math.max(3, 20 - ri * 2);
+      for (let i = 0; i < count; i++) {
+        const names = ITEM_NAMES[cat.id];
+        const idx = (ri * 3 + i) % names.en.length;
+        items.push({
+          id: _id++,
+          category: cat.id,
+          rarity: rarity.id,
+          name: names.en[idx] + (i >= names.en.length ? ` #${i+1}` : ''),
+          nameRu: names.ru[idx] + (i >= names.ru.length ? ` #${i+1}` : ''),
+          value: (ri + 1) * 10,
+        });
+      }
     }
-  });
+  }
   return items;
 }
 
-export const OUTFIT_ITEMS = [
-  ...genItems('helmet', H, [7, 6, 5, 4, 3, 2]),
-  ...genItems('chest', C, [7, 6, 5, 4, 3, 2]),
-  ...genItems('pants', P, [6, 5, 4, 3, 2, 2]),
-  ...genItems('shoes', S2, [6, 5, 4, 3, 2, 2]),
-  ...genItems('weapon', W, [7, 6, 5, 4, 3, 2]),
-  ...genItems('accessory', A, [6, 5, 4, 3, 2, 2]),
+// NPCs
+export const NPCS = [
+  { id: 'librarian', name: 'Librarian', nameRu: 'Библиотекарь', role: 'books', dialogKey: 'npc_librarian', color: '#8b7355' },
+  { id: 'alchemist', name: 'Master Alchemist', nameRu: 'Мастер Алхимик', role: 'elixirs', dialogKey: 'npc_alchemist', color: '#10b981' },
+  { id: 'merchant', name: 'Temple Merchant', nameRu: 'Храмовой Торговец', role: 'general', dialogKey: 'npc_merchant', color: '#f7c948' },
+  { id: 'banker', name: 'Coin Banker', nameRu: 'Монетный Банкир', role: 'coins', dialogKey: 'npc_banker', color: '#f7c948' },
+  { id: 'blacksmith', name: 'Arcane Blacksmith', nameRu: 'Мистический Кузнец', role: 'artifacts', dialogKey: 'npc_blacksmith', color: '#06b6d4' },
+  { id: 'archivist', name: 'Chief Archivist', nameRu: 'Главный Архивариус', role: 'collectibles', dialogKey: 'npc_archivist', color: '#8b7355' },
+  { id: 'oracle', name: 'The Oracle', nameRu: 'Оракул', role: 'seals', dialogKey: 'npc_oracle', color: '#10b981' },
+  { id: 'guard', name: 'Temple Guard', nameRu: 'Храмовой Страж', role: 'quest', dialogKey: 'npc_guard', color: '#f7c948' },
+  { id: 'grandmaster', name: 'Grand Master', nameRu: 'Великий Мастер', role: 'master', dialogKey: 'npc_grandmaster', color: '#f7c948' },
+  { id: 'collector', name: 'Secret Collector', nameRu: 'Тайный Коллекционер', role: 'crystals', dialogKey: 'npc_collector', color: '#a855f7' },
+  { id: 'engraver', name: 'Rune Engraver', nameRu: 'Рунический Гравёр', role: 'amulets', dialogKey: 'npc_engraver', color: '#06b6d4' },
+  { id: 'miner', name: 'Crystal Miner', nameRu: 'Кристальный Шахтёр', role: 'crystals', dialogKey: 'npc_miner', color: '#10b981' },
+  { id: 'dealer', name: 'Potion Dealer', nameRu: 'Торговец Зельями', role: 'elixirs', dialogKey: 'npc_dealer', color: '#f7c948' },
+  { id: 'keeper', name: 'Treasure Keeper', nameRu: 'Хранитель Сокровищ', role: 'vault', dialogKey: 'npc_keeper', color: '#f7c948' },
+  { id: 'monk', name: 'Shadow Monk', nameRu: 'Теневой Монах', role: 'masks', dialogKey: 'npc_monk', color: '#10b981' },
 ];
-// Total: 27+24+20+18+24+18 = 131 items
 
-export const OUTFIT_DROP_RATES = [
-  { rarity: 'common', chance: 0.40 },
-  { rarity: 'uncommon', chance: 0.25 },
-  { rarity: 'rare', chance: 0.15 },
-  { rarity: 'epic', chance: 0.08 },
-  { rarity: 'legendary', chance: 0.03 },
-  { rarity: 'secret', chance: 0.01 },
-  { rarity: 'nothing', chance: 0.08 },
+// Locations
+export const LOCATIONS = [
+  { id: 'temple', name: 'The Great Temple', nameRu: 'Великий Храм', nav: true },
+  { id: 'library', name: 'Secret Library', nameRu: 'Тайная Библиотека', nav: true },
+  { id: 'alchemy', name: 'Alchemy Lab', nameRu: 'Алхимическая Лаборатория', nav: true },
+  { id: 'vault', name: 'The Vault', nameRu: 'Хранилище', nav: true },
+  { id: 'hall', name: 'Hall of Masters', nameRu: 'Зал Мастеров', nav: false },
+  { id: 'market', name: 'Black Market', nameRu: 'Чёрный Рынок', nav: true },
+  { id: 'initiation', name: 'Initiation Room', nameRu: 'Зал Посвящения', nav: false },
+  { id: 'observatory', name: 'Observatory', nameRu: 'Обсерватория', nav: false },
+  { id: 'archive', name: 'Underground Archive', nameRu: 'Подземный Архив', nav: false },
+  { id: 'garden', name: 'Temple Garden', nameRu: 'Храмовой Сад', nav: false },
 ];
 
-export const MASON_EARN = {
-  basePerFeed: 0.001,
-  feedCostBase: 2,
-  feedCostPerClick: 0.5,
-  cooldownHours: 9,
-  cooldownMs: 9 * 60 * 60 * 1000,
+// Merge recipe costs
+export const MERGE_COST = {
+  common: 10, uncommon: 25, rare: 50, epic: 100,
+  legendary: 250, mythic: 500, ancient: 1000, divine: 2500, secret: 5000,
 };
 
-export const SCROLL_TYPES = [
-  { id: 'common', name: 'Common Scroll', nameRu: 'Обычный Свиток', color: '#78716c', glow: 'rgba(120,113,108,0.3)', baseValue: 10, mergeCount: 3 },
-  { id: 'uncommon', name: 'Uncommon Scroll', nameRu: 'Необычный Свиток', color: '#10b981', glow: 'rgba(16,185,129,0.3)', baseValue: 50, mergeCount: 3 },
-  { id: 'rare', name: 'Rare Scroll', nameRu: 'Редкий Свиток', color: '#3b82f6', glow: 'rgba(59,130,246,0.3)', baseValue: 250, mergeCount: 3 },
-  { id: 'epic', name: 'Epic Scroll', nameRu: 'Эпический Свиток', color: '#a855f7', glow: 'rgba(168,85,247,0.3)', baseValue: 1250, mergeCount: 3 },
-  { id: 'legendary', name: 'Legendary Scroll', nameRu: 'Легендарный Свиток', color: '#f7c948', glow: 'rgba(247,201,72,0.3)', baseValue: 6250, mergeCount: 2 },
-];
-
-export const MERGE_FIELD_CONFIG = {
-  rows: 7,
-  cols: 7,
-  // Center 6 slots unlocked by default (indices in 7x7 grid)
-  centerUnlocked: [23, 24, 25, 30, 31, 32],
-  slotCosts: [5, 15, 45, 100, 250, 500, 1000, 2000, 3500, 6000, 10000, 15000, 25000, 40000, 65000, 100000, 150000, 250000, 400000, 650000, 1000000, 1500000, 2500000, 4000000, 6500000, 10000000],
-  maxSlots: 49,
+export const MERGE_MATRIX = {
+  common: 'uncommon', uncommon: 'rare', rare: 'epic', epic: 'legendary',
+  legendary: 'mythic', mythic: 'ancient', ancient: 'divine', divine: 'secret', secret: null,
 };
 
-export const QUEST_CONFIG = {
-  feedCostBase: 100,
-  feedCostMult: 1.3,
-  questDurationBase: 30000,
-  questDurationMult: 1.15,
-  minDuration: 15000,
-  maxDuration: 180000,
-  scrollDropMin: 1,
-  scrollDropMax: 3,
-  rareDropChance: 0.1,
-  epicDropChance: 0.03,
-  legendaryDropChance: 0.005,
-};
+export const QUEST_DURATION = 60000; // 60s base
+export const QUEST_REWARD_BASE = 10;
 
-export const TAP_UPGRADES = [];
-
-export const GLOBAL_UPGRADES = [
-  { id: 'world_bonus', name: 'World Synergy', nameRu: 'Синергия Миров', icon: S + '/Section_Upgrades.png', desc: '+10% per unlocked world', baseCost: 10000, costMult: 2, maxLevel: 50 },
-  { id: 'time_warp', name: 'Time Warp', nameRu: 'Временной Разлом', icon: S + '/speed_icon.png', desc: 'x2 earnings for 60s (cost: 1000 A)', baseCost: 2500, costMult: 1, maxLevel: 0, oneTime: true },
-  { id: 'mason_awareness', name: 'Mason Awareness', nameRu: 'Осведомлённость Масонов', icon: S + '/goldStar.png', desc: '+5% mason bonus per level', baseCost: 50000, costMult: 3, maxLevel: 20 },
-  { id: 'portal_luck', name: 'Portal Attunement', nameRu: 'Настройка Портала', icon: S + '/big_offer_button.png', desc: '+15% portal gift value', baseCost: 25000, costMult: 2.5, maxLevel: 15 },
-  { id: 'star_attraction', name: 'Star Magnet', nameRu: 'Звёздный Магнит', icon: S + '/bronzeStar.png', desc: '+10% star drop rate', baseCost: 75000, costMult: 2, maxLevel: 25 },
+export const INITIAL_TUTORIAL = [
+  'tut_welcome',
+  'tut_location',
+  'tut_collect',
+  'tut_npc',
+  'tut_merge',
+  'tut_done',
 ];
-
-export const TUTORIAL_STEPS = [
-  { textKey: 'tutWelcome', highlight: null, sprite: 'welcome' },
-  { textKey: 'tutTap', highlight: '#illuminatusTap', sprite: 'base' },
-  { textKey: 'tutFirstClone', highlight: '#navClones', sprite: 'base' },
-  { textKey: 'tutMergeSlot', highlight: '#navScrolls', sprite: 'base' },
-  { textKey: 'tutManagers', highlight: null, sprite: 'warning' },
-  { textKey: 'tutBoosts', highlight: '#navBoosts', sprite: 'base' },
-  { textKey: 'tutWorlds', highlight: '#worldTabs', sprite: 'welcome' },
-  { textKey: 'tutCostumes', highlight: null, sprite: 'bright' },
-  { textKey: 'tutMasons', highlight: '#navMasons', sprite: 'warning' },
-  { textKey: 'tutStars', highlight: null, sprite: 'base' },
-  { textKey: 'tutDone', highlight: null, sprite: 'base' },
-];
-
-export const ANIMATIONS = {
-  cloneCell: Array.from({length: 18}, (_, i) => './assets/illuminati/sprites/Animation_GameCell-sheet-ipadhd_' + i + '.png'),
-  popups: Array.from({length: 31}, (_, i) => './assets/illuminati/sprites/Animation_Popups-sheet-ipadhd_' + i + '.png'),
-  effects: ['./assets/illuminati/sprites/Effects-sheet-ipadhd_1.png', './assets/illuminati/sprites/Effects-sheet-ipadhd_2.png', './assets/illuminati/sprites/Effects-sheet-ipadhd_3.png', './assets/illuminati/sprites/Effects-sheet-ipadhd_4.png'],
-  illuminatus: [S + '/CharactersStage01-sheet-ipadhd_0.png', S + '/CharactersStage02-sheet-ipadhd_0.png', S + '/CharactersStage03-sheet-ipadhd_0.png', S + '/CharactersStage04-sheet-ipadhd_0.png', S + '/Illumineus_End_Bright.png'],
-};
-
-export const WORLD_BACKGROUNDS = [
-  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_0.png',
-  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_1.png',
-  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_2.png',
-  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_3.png',
-  './assets/illuminati/sprites/Backgrounds-sheet-ipadhd_0.png',
-];
-
-export const TG_BOT = 'Illuminatemasonbot';
-export const SUPPORT_URL = 'https://t.me/Superadminist';
