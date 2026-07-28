@@ -182,3 +182,74 @@ input,textarea{outline:none;border:none;font-family:inherit}
 
 /* ─── SCROLLBAR ─── */
 ::-webkit-scrollbar{width:0;height:0}
+
+/* ─── GAME SCREEN ─── */
+.game-screen{background:#060610;position:relative;overflow:hidden}
+.game-container{position:absolute;top:48px;left:0;right:0;bottom:60px}
+.game-hud{position:absolute;bottom:64px;left:0;right:0;z-index:10;display:flex;justify-content:space-between;padding:8px 12px;pointer-events:none}
+.game-level{font-size:10px;font-weight:700;color:#10b981;background:rgba(6,6,16,0.6);padding:4px 10px;border-radius:6px;backdrop-filter:blur(4px)}
+.game-npc-count{font-size:9px;color:rgba(255,255,255,0.2);background:rgba(6,6,16,0.6);padding:4px 10px;border-radius:6px;backdrop-filter:blur(4px)}
+
+/* ─── CHARACTER DETAIL ─── */
+.npc-detail-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.npc-detail-avatar{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.npc-card.locked{opacity:0.4;cursor:default}
+.npc-lock{font-size:9px;color:#f7c948;padding:4px 8px;border-radius:6px;background:rgba(247,201,72,0.06);border:1px solid rgba(247,201,72,0.12);cursor:pointer;white-space:nowrap}
+.npc-lock:active{background:rgba(247,201,72,0.12)}
+.section-title{font-size:12px;font-weight:600;color:rgba(255,255,255,0.3);margin:12px 0 6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.03)}
+
+/* ─── OUTFIT ─── */
+.outfit-slots{display:flex;flex-direction:column;gap:4px}
+.outfit-slot{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:8px;cursor:pointer;transition:all 0.2s;position:relative}
+.outfit-slot:active{background:rgba(255,255,255,0.04)}
+.outfit-slot-label{font-size:8px;font-weight:600;color:rgba(255,255,255,0.15);min-width:44px}
+.outfit-slot-icon{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.15)}
+.outfit-slot-name{font-size:9px;color:rgba(255,255,255,0.2);flex:1}
+.outfit-unequip{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.15);color:#ef444466;font-size:9px;display:flex;align-items:center;justify-content:center}
+
+/* ─── NPC QUEST ACTIONS ─── */
+.npc-quest-actions{display:flex;gap:6px;margin-top:8px}
+
+/* ─── SHOP ─── */
+.shop-screen{background:#060610}
+.shop-scroll{padding:56px 12px 72px;overflow-y:auto}
+.shop-section{margin-bottom:8px}
+.shop-balance{font-size:11px;color:rgba(255,255,255,0.2);margin:4px 0}
+.shop-wallet{font-size:9px;color:rgba(16,185,129,0.3);margin:4px 0}
+.shop-rate{font-size:10px;color:rgba(255,255,255,0.1);margin:6px 0}
+.shop-packs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.shop-pack{padding:12px 8px;border-radius:10px;background:rgba(16,185,129,0.02);border:1px solid rgba(16,185,129,0.06);text-align:center;cursor:pointer;transition:all 0.2s}
+.shop-pack:active{transform:scale(0.95);background:rgba(16,185,129,0.06)}
+.shop-pack-amount{font-size:14px;font-weight:700;color:#10b981}
+.shop-pack-price{font-size:10px;color:rgba(255,255,255,0.15);margin-top:2px}
+.shop-btn{padding:10px 16px;border-radius:8px;font-size:11px;font-weight:600;transition:all 0.2s;width:100%;text-align:center;margin:4px 0}
+.shop-btn.primary{background:linear-gradient(135deg,#10b981,#047857);color:#fff}
+.shop-btn:active{transform:scale(0.95)}
+
+/* ─── STATS ─── */
+.stats-screen{background:#060610}
+.stats-scroll{padding:56px 12px 72px;overflow-y:auto}
+.stats-points{font-size:11px;color:#f7c948;margin:4px 0 8px}
+.stat-row{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.stat-name{font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);min-width:56px}
+.stat-bar-track{flex:1;height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden}
+.stat-bar-fill{height:100%;background:linear-gradient(90deg,#10b981,#f7c948);border-radius:2px;transition:width 0.3s}
+.stat-value{font-size:10px;font-weight:600;color:rgba(255,255,255,0.2);min-width:20px;text-align:right}
+.stat-up-btn{width:24px;height:24px;border-radius:6px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.15);color:#10b981;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.stat-up-btn:active:not(:disabled){transform:scale(0.9)}
+.stat-up-btn:disabled{opacity:0.2;cursor:default}
+.stat-info{margin-top:12px;padding:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:10px}
+.stat-info-row{font-size:10px;color:rgba(255,255,255,0.15);padding:2px 0;display:flex;justify-content:space-between}
+
+/* ─── COLLECTION SCROLL TABS ─── */
+.coll-scroll-wrap{overflow-x:auto;padding:0 12px;scrollbar-width:none;margin-bottom:4px}
+.coll-scroll-wrap::-webkit-scrollbar{display:none}
+.coll-rarity-tabs{display:flex;gap:4px;padding-bottom:4px}
+.coll-tab.rarity{font-size:8px;padding:4px 8px}
+
+/* ─── INVENTORY HEADER ─── */
+.inv-header{padding:56px 12px 8px;text-align:center}
+.inventory-screen{background:#060610}
+
+/* ─── MERGE SCROLL ─── */
+.merge-scroll{padding-bottom:72px;overflow-y:auto}
