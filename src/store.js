@@ -1,4 +1,4 @@
-import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS } from './config.js';
+import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS, SCROLL_TYPES, MERGE_FIELD_CONFIG, QUEST_CONFIG } from './config.js';
 import { getOrCreateUserId, saveUserData, loadUserData } from './firebase.js';
 import { getLang } from './i18n.js';
 
@@ -67,6 +67,18 @@ const defaultState = () => ({
   comboLastTap: 0,
   bestCombo: 0,
   totalTaps: 0,
+  // Quest / Feed / Scroll / Merge system
+  questActive: false,
+  questStartTime: 0,
+  questDuration: 30000,
+  questFeedCost: 100,
+  questCompleted: false,
+  questScrolls: [],
+  scrollInventory: [],
+  mergeFieldSlots: 9,
+  mergeFieldUnlocked: 9,
+  mergeField: new Array(9).fill(null),
+  mergeSelected: null,
 });
 
 class Store {
@@ -601,6 +613,204 @@ class Store {
     if (!this._state.unlockedWorlds.includes(idx)) return false;
     this._state.currentWorld = idx;
     return true;
+  }
+
+  /* ─── Quest / Feed / Scroll / Merge System ─── */
+
+  startQuest() {
+    if (this._state.questActive && !this._state.questCompleted) return false;
+    const cost = this._state.questFeedCost;
+    if (this._state.apeBalance < cost) return false;
+    this._state.apeBalance -= cost;
+    this._state.questActive = true;
+    this._state.questStartTime = Date.now();
+    this._state.questDuration = Math.min(QUEST_CONFIG.maxDuration, Math.max(QUEST_CONFIG.minDuration,
+      QUEST_CONFIG.questDurationBase * Math.pow(QUEST_CONFIG.questDurationMult, this.countCompletedQuests())));
+    this._state.questCompleted = false;
+    this._state.questScrolls = [];
+    this._state.questFeedCost = Math.floor(QUEST_CONFIG.feedCostBase * Math.pow(QUEST_CONFIG.feedCostMult, this.countCompletedQuests()));
+    this.save();
+    return true;
+  }
+
+  countCompletedQuests() {
+    return this._state.upgradeLevels.quests_completed || 0;
+  }
+
+  tickQuest() {
+    if (!this._state.questActive || this._state.questCompleted) return false;
+    if (Date.now() - this._state.questStartTime >= this._state.questDuration) {
+      // Generate scrolls
+      const count = QUEST_CONFIG.scrollDropMin + Math.floor(Math.random() * (QUEST_CONFIG.scrollDropMax - QUEST_CONFIG.scrollDropMin + 1));
+      const scrolls = [];
+      for (let i = 0; i < count; i++) {
+        scrolls.push(this.generateScroll());
+      }
+      this._state.questScrolls = scrolls;
+      this._state.questCompleted = true;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  generateScroll() {
+    const r = Math.random();
+    let type = 'common';
+    if (r < QUEST_CONFIG.legendaryDropChance) type = 'legendary';
+    else if (r < QUEST_CONFIG.legendaryDropChance + QUEST_CONFIG.epicDropChance) type = 'epic';
+    else if (r < QUEST_CONFIG.legendaryDropChance + QUEST_CONFIG.epicDropChance + QUEST_CONFIG.rareDropChance) type = 'rare';
+    else if (r < 0.5) type = 'uncommon';
+    const st = SCROLL_TYPES.find(s => s.id === type) || SCROLL_TYPES[0];
+    return { id: 'scroll_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), type: type, value: st.baseValue };
+  }
+
+  collectQuestScrolls() {
+    if (!this._state.questCompleted) return [];
+    const scrolls = [...this._state.questScrolls];
+    this._state.scrollInventory.push(...scrolls);
+    this._state.questActive = false;
+    this._state.questCompleted = false;
+    this._state.questScrolls = [];
+    this._state.upgradeLevels.quests_completed = (this._state.upgradeLevels.quests_completed || 0) + 1;
+    this.addIllumineusXp(10);
+    this.save();
+    return scrolls;
+  }
+
+  getQuestProgress() {
+    if (!this._state.questActive || this._state.questCompleted) return 0;
+    const elapsed = Date.now() - this._state.questStartTime;
+    return Math.min(1, elapsed / this._state.questDuration);
+  }
+
+  getQuestTimeLeft() {
+    if (!this._state.questActive) return 0;
+    const elapsed = Date.now() - this._state.questStartTime;
+    return Math.max(0, this._state.questDuration - elapsed);
+  }
+
+  /* ─── Merge Field ─── */
+
+  getMergeFieldSlotIndex(row, col) {
+    const cols = MERGE_FIELD_CONFIG.baseCols;
+    return row * cols + col;
+  }
+
+  getMergeFieldDims() {
+    const unlocked = this._state.mergeFieldUnlocked;
+    const baseCols = MERGE_FIELD_CONFIG.baseCols;
+    const rows = Math.ceil(unlocked / baseCols);
+    return { rows, cols: baseCols, total: unlocked };
+  }
+
+  isMergeSlotUnlocked(index) {
+    return index < this._state.mergeFieldUnlocked;
+  }
+
+  canUnlockMergeSlot() {
+    const total = this._state.mergeField.length;
+    return this._state.mergeFieldUnlocked < total;
+  }
+
+  getMergeSlotUnlockCost() {
+    const next = this._state.mergeFieldUnlocked;
+    if (next >= this._state.mergeField.length) return Infinity;
+    return Math.floor(MERGE_FIELD_CONFIG.slotUnlockCost * Math.pow(MERGE_FIELD_CONFIG.slotUnlockMult, next - 8));
+  }
+
+  unlockMergeSlot() {
+    if (!this.canUnlockMergeSlot()) return false;
+    const cost = this.getMergeSlotUnlockCost();
+    if (this._state.apeBalance < cost) return false;
+    this._state.apeBalance -= cost;
+    this._state.mergeFieldUnlocked++;
+    this.save();
+    return true;
+  }
+
+  placeScrollOnField(scrollId, slotIndex) {
+    const scroll = this._state.scrollInventory.find(s => s.id === scrollId);
+    if (!scroll) return false;
+    if (slotIndex >= this._state.mergeFieldUnlocked) return false;
+    if (this._state.mergeField[slotIndex] !== null) return false;
+    this._state.mergeField[slotIndex] = { ...scroll };
+    this._state.scrollInventory = this._state.scrollInventory.filter(s => s.id !== scrollId);
+    this.save();
+    return true;
+  }
+
+  removeScrollFromField(slotIndex) {
+    const item = this._state.mergeField[slotIndex];
+    if (!item) return false;
+    this._state.scrollInventory.push(item);
+    this._state.mergeField[slotIndex] = null;
+    if (this._state.mergeSelected === slotIndex) this._state.mergeSelected = null;
+    this.save();
+    return true;
+  }
+
+  selectMergeSlot(slotIndex) {
+    if (slotIndex >= this._state.mergeFieldUnlocked) return false;
+    if (this._state.mergeField[slotIndex] === null) return false;
+    if (this._state.mergeSelected === slotIndex) {
+      this._state.mergeSelected = null;
+      return false;
+    }
+    if (this._state.mergeSelected !== null) {
+      // Try to merge
+      const result = this.tryMerge(this._state.mergeSelected, slotIndex);
+      this._state.mergeSelected = null;
+      return result;
+    }
+    this._state.mergeSelected = slotIndex;
+    this.save();
+    return false;
+  }
+
+  tryMerge(slotA, slotB) {
+    const a = this._state.mergeField[slotA];
+    const b = this._state.mergeField[slotB];
+    if (!a || !b) return false;
+    if (a.type !== b.type) return false;
+    const st = SCROLL_TYPES.find(s => s.id === a.type);
+    if (!st) return false;
+    if (st.mergeCount < 2) return false;
+    // Get tier index
+    const tierIdx = SCROLL_TYPES.findIndex(s => s.id === a.type);
+    if (tierIdx >= SCROLL_TYPES.length - 1) {
+      // Max tier - just consume and boost value
+      this._state.mergeField[slotA] = null;
+      this._state.mergeField[slotB] = null;
+      this._state.scrollInventory.push({ id: 'scroll_merged_' + Date.now(), type: a.type, value: a.value * 3 });
+      this.save();
+      return true;
+    }
+    // Merge up
+    const nextType = SCROLL_TYPES[tierIdx + 1];
+    this._state.mergeField[slotA] = null;
+    this._state.mergeField[slotB] = null;
+    this._state.scrollInventory.push({ id: 'scroll_merged_' + Date.now(), type: nextType.id, value: nextType.baseValue });
+    this.save();
+    return true;
+  }
+
+  getScrollsForRedeem() {
+    // Convert field scrolls to $APE
+    let total = 0;
+    const field = this._state.mergeField;
+    for (let i = 0; i < field.length; i++) {
+      if (field[i]) {
+        total += field[i].value;
+        field[i] = null;
+      }
+    }
+    if (total > 0) {
+      this._state.apeBalance += total;
+      this._state.totalApeEarned += total;
+      this.save();
+    }
+    return total;
   }
 
   /* ─── Auto click ─── */

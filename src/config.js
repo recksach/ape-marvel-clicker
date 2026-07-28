@@ -419,6 +419,37 @@ export const WORLDS = [
   },
 ];
 
+export const SCROLL_TYPES = [
+  { id: 'common', name: 'Common Scroll', nameRu: 'Обычный Свиток', color: '#78716c', glow: 'rgba(120,113,108,0.3)', baseValue: 10, mergeCount: 3 },
+  { id: 'uncommon', name: 'Uncommon Scroll', nameRu: 'Необычный Свиток', color: '#10b981', glow: 'rgba(16,185,129,0.3)', baseValue: 50, mergeCount: 3 },
+  { id: 'rare', name: 'Rare Scroll', nameRu: 'Редкий Свиток', color: '#3b82f6', glow: 'rgba(59,130,246,0.3)', baseValue: 250, mergeCount: 3 },
+  { id: 'epic', name: 'Epic Scroll', nameRu: 'Эпический Свиток', color: '#a855f7', glow: 'rgba(168,85,247,0.3)', baseValue: 1250, mergeCount: 3 },
+  { id: 'legendary', name: 'Legendary Scroll', nameRu: 'Легендарный Свиток', color: '#f7c948', glow: 'rgba(247,201,72,0.3)', baseValue: 6250, mergeCount: 2 },
+];
+
+export const MERGE_FIELD_CONFIG = {
+  baseRows: 3,
+  baseCols: 3,
+  slotUnlockCost: 10000,
+  slotUnlockMult: 2,
+  maxRows: 6,
+  maxCols: 6,
+};
+
+export const QUEST_CONFIG = {
+  feedCostBase: 100,
+  feedCostMult: 1.3,
+  questDurationBase: 30000,
+  questDurationMult: 1.15,
+  minDuration: 15000,
+  maxDuration: 180000,
+  scrollDropMin: 1,
+  scrollDropMax: 3,
+  rareDropChance: 0.1,
+  epicDropChance: 0.03,
+  legendaryDropChance: 0.005,
+};
+
 export const TAP_UPGRADES = [];
 
 export const GLOBAL_UPGRADES = [

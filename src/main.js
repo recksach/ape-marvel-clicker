@@ -12,6 +12,7 @@ const NAV_ICONS = {
   empire: './assets/illuminati/sprites/Icon_Eye_2.png',
   clones: './assets/illuminati/sprites/Section_Clones_Common.png',
   boosts: './assets/illuminati/sprites/video_ads_icon.png',
+  scrolls: './assets/illuminati/sprites/bronzeStar.png',
   masons: './assets/illuminati/sprites/goldStar.png',
   wallet: './assets/illuminati/sprites/diamond.png',
 };
@@ -62,13 +63,14 @@ function navHTML(active) {
     { key: 'empire', label: t('navEmpire'), screen: 'game' },
     { key: 'clones', label: t('navClones'), screen: 'clones' },
     { key: 'boosts', label: t('navBoosts'), screen: 'ads' },
+    { key: 'scrolls', label: t('scrollTitle'), screen: 'scrolls' },
     { key: 'masons', label: t('navMasons'), screen: 'masons' },
     { key: 'wallet', label: t('navWallet'), screen: 'wallet' },
   ];
   return `<div class="bottomnav">
     ${items.map(it => {
       const isActive = it.screen === active;
-      const targetId = it.key === 'clones' ? 'navClones' : it.key === 'boosts' ? 'navBoosts' : it.key === 'masons' ? 'navMasons' : '';
+      const targetId = it.key === 'clones' ? 'navClones' : it.key === 'boosts' ? 'navBoosts' : it.key === 'masons' ? 'navMasons' : it.key === 'scrolls' ? 'navScrolls' : '';
       return `<button class="navitem ${isActive ? 'active' : ''}" ${targetId ? `id="${targetId}"` : ''} onclick="W._nav('${it.screen}')">
         <img src="${NAV_ICONS[it.key]}" class="ico-img" alt="">
         <span class="nav-label">${it.label}</span>
@@ -206,6 +208,24 @@ function showGame() {
           <div class="stat-pill"><span class="stat-label">${t('clones')}</span><span class="stat-val">${ownedClones.length}/${world.clones.length}</span></div>
         </div>
 
+        ${s.questActive && !s.questCompleted ? `
+          <div class="quest-progress-bar">
+            <div class="quest-progress-label">${t('questInProgress')}</div>
+            <div class="quest-progress-track">
+              <div class="quest-progress-fill" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div>
+            </div>
+            <div class="quest-progress-time">${Math.ceil(store.getQuestTimeLeft()/1000)}s</div>
+          </div>
+        ` : ''}
+        ${s.questCompleted ? `
+          <div class="quest-complete-btn" onclick="W._collectScrolls()">
+            <div class="quest-complete-glow"></div>
+            <span>📜 ${t('questCollect')}</span>
+          </div>
+        ` : ''}
+        <div class="quest-fab" id="questFab" onclick="W._nav('scrolls')">
+          <span class="quest-fab-icon">📜</span>
+        </div>
         <div class="roulette-fab" id="rouletteFab" onclick="W._openRoulette()">
           <span class="roulette-fab-icon">🎰</span>
         </div>
@@ -541,6 +561,103 @@ function showMasons() {
   document.getElementById('app').innerHTML = html;
 }
 
+function showScrolls() {
+  const s = store.state;
+  const questCost = s.questFeedCost;
+  const canFeed = s.apeBalance >= questCost && !s.questActive;
+  const fieldData = [];
+  for (let i = 0; i < s.mergeFieldUnlocked; i++) {
+    fieldData.push({ index: i, item: s.mergeField[i], selected: s.mergeSelected === i });
+  }
+  const lockedSlots = s.mergeField.length - s.mergeFieldUnlocked;
+  const unlockCost = store.getMergeSlotUnlockCost();
+  const canUnlock = store.canUnlockMergeSlot() && s.apeBalance >= unlockCost;
+  const scrollCount = s.scrollInventory.length;
+
+  let html = `<div class="screen active">
+    ${topbarHTML(t('scrollTitle'), '#10b981')}
+    <div class="scroll">
+      <div class="section-header-img">
+        <span>📜 ${t('questTitle')}</span>
+      </div>
+      <div class="quest-card">
+        <div class="quest-info">
+          <p>${t('questSub')}</p>
+          ${s.questActive && !s.questCompleted ? `
+            <div class="quest-progress-bar" style="margin:10px 0">
+              <div class="quest-progress-label">${t('questInProgress')}</div>
+              <div class="quest-progress-track">
+                <div class="quest-progress-fill" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div>
+              </div>
+              <div class="quest-progress-time">${Math.ceil(store.getQuestTimeLeft()/1000)}s</div>
+            </div>
+          ` : s.questCompleted ? `
+            <div class="quest-complete-large" onclick="W._collectScrolls()">
+              <span class="quest-collect-icon">📜</span>
+              <span>${t('questCollect')}</span>
+            </div>
+          ` : `
+            <button class="btn-lg btn-primary" onclick="W._startQuest()" ${canFeed ? '' : 'disabled'}
+              style="${canFeed ? '' : 'opacity:0.4;cursor:not-allowed;'}">
+              🍽 ${t('questFeed')} — ${fmt(questCost)} $APE
+            </button>
+          `}
+        </div>
+      </div>
+
+      <div class="section-header-img" style="margin-top:16px">
+        <span>📦 ${t('scrollInventory')} (${scrollCount})</span>
+      </div>
+      <div class="scroll-inventory">
+        ${scrollCount === 0 ? `<div class="empty-state">${t('scrollEmpty')}</div>` :
+          s.scrollInventory.slice(0, 20).map(sc => {
+            const st = SCROLL_TYPES.find(t => t.id === sc.type) || SCROLL_TYPES[0];
+            return `<div class="scroll-item" style="border-color:${st.color};background:${st.glow}08">
+              <div class="scroll-item-icon" style="color:${st.color}">📜</div>
+              <div class="scroll-item-info">
+                <div class="scroll-item-name" style="color:${st.color}">${st.name}</div>
+                <div class="scroll-item-value">${fmt(sc.value)} $APE</div>
+              </div>
+            </div>`;
+          }).join('')}
+      </div>
+
+      <div class="section-header-img" style="margin-top:16px">
+        <span>🔮 ${t('mergeField')}</span>
+      </div>
+      <div class="merge-field-grid">
+        ${fieldData.map(fd => {
+          const st = fd.item ? (SCROLL_TYPES.find(t => t.id === fd.item.type) || SCROLL_TYPES[0]) : null;
+          return `<div class="merge-slot ${fd.selected ? 'selected' : ''} ${!fd.item ? 'empty' : ''}"
+            onclick="${fd.item ? `W._selectMerge(${fd.index})` : ''}">
+            ${fd.item ? `
+              <div class="merge-slot-item" style="border-color:${st.color};background:${st.glow}15">
+                <span style="color:${st.color};font-size:18px">📜</span>
+                <span style="color:${st.color};font-size:9px">${st.name.slice(0,6)}</span>
+                <span style="color:rgba(255,255,255,0.3);font-size:7px">${fmt(fd.item.value)}</span>
+              </div>
+            ` : ''}
+          </div>`;
+        }).join('')}
+        ${Array.from({length: lockedSlots}, (_, i) => {
+          const cost = store.getMergeSlotUnlockCost();
+          return `<div class="merge-slot locked" onclick="W._unlockMergeSlot()">
+            <div class="merge-lock-icon">🔒</div>
+            ${canUnlock ? `<div class="merge-unlock-cost">${fmt(cost)}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${canUnlock ? `<button class="btn-sm btn-buy" onclick="W._unlockMergeSlot()" style="margin:8px auto;display:block">🔓 ${t('mergeUnlock')} ${fmt(unlockCost)} $APE</button>` : ''}
+      ${!canUnlock && lockedSlots === 0 ? `<div class="empty-state" style="margin-top:8px">${t('mergeMax')}</div>` : ''}
+      <button class="btn-lg btn-primary" onclick="W._redeemScrolls()" style="margin-top:10px">
+        💰 ${t('scrollRedeem')}
+      </button>
+    </div>
+    ${navHTML('scrolls')}
+  </div>`;
+  document.getElementById('app').innerHTML = html;
+}
+
 function show() {
   switch(currentScreen) {
     case 'auth': showAuth(); break;
@@ -550,6 +667,7 @@ function show() {
     case 'upgrades': showUpgrades(); break;
     case 'masons': showMasons(); break;
     case 'wallet': showWallet(); break;
+    case 'scrolls': showScrolls(); break;
     default: showAuth();
   }
   if (currentScreen !== 'auth' && currentScreen !== 'loading') {
@@ -766,7 +884,13 @@ let renderTimer = null;
 
 function startGameLoop() {
   stopGameLoop();
-  tickTimer = setInterval(() => { store.tick(); }, 500);
+  tickTimer = setInterval(() => {
+    store.tick();
+    if (store.state.questActive && !store.state.questCompleted) {
+      const completed = store.tickQuest();
+      if (completed && currentScreen === 'game') showGame();
+    }
+  }, 500);
   autoTimer = setInterval(() => {
     if (currentScreen !== 'game') return;
     const d = store.autoClick();
@@ -814,6 +938,27 @@ window.W._closeRoulette = () => { const el = document.getElementById('rouletteOv
 window.W._spinRoulette = () => { playRouletteSpin(); spinRoulette(); };
 window.W._claimDaily = () => { const r = store.claimDailyBonus(); if (r) { playDailyBonus(); W._closeDaily(); show(); } };
 window.W._closeDaily = () => { const el = document.getElementById('dailyOverlay'); if (el) el.remove(); };
+
+/* ─── Quest / Scroll / Merge Handlers ─── */
+window.W._startQuest = () => {
+  if (store.startQuest()) { playBuy(); showScrolls(); }
+};
+window.W._collectScrolls = () => {
+  const scrolls = store.collectQuestScrolls();
+  if (scrolls.length > 0) { playWin(); show(); }
+};
+window.W._selectMerge = (index) => {
+  const result = store.selectMergeSlot(index);
+  if (result && typeof result === 'boolean' && result) playBuy();
+  showScrolls();
+};
+window.W._unlockMergeSlot = () => {
+  if (store.unlockMergeSlot()) { playBuy(); showScrolls(); }
+};
+window.W._redeemScrolls = () => {
+  const total = store.getScrollsForRedeem();
+  if (total > 0) { playWin(); showScrolls(); }
+};
 
 /* ─── Roulette ─── */
 function showRouletteOverlay() {
