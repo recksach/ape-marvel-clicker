@@ -403,3 +403,60 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Inter',-apple-syst
 .quest-progress-inline{display:flex;align-items:center;gap:8px;margin:8px 0}
 .quest-progress-timer{font-size:10px;font-weight:700;color:#10b981;white-space:nowrap}
 .empty-state{padding:16px;text-align:center;font-size:11px;color:rgba(255,255,255,0.15)}
+/* ─── Wardrobe ─── */
+.wardrobe-screen{background:#060610;min-height:100vh}
+.wardrobe-scroll{padding:8px 10px 80px;overflow-y:auto;max-height:calc(100vh - 50px)}
+.wardrobe-section{margin-bottom:14px}
+.wardrobe-section-title{font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);padding:4px 0 6px;border-bottom:1px solid rgba(255,255,255,0.04);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.wardrobe-items{display:grid;gap:4px}
+.wardrobe-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:8px;transition:all 0.2s;cursor:pointer;position:relative}
+.wardrobe-item:active{transform:scale(0.98)}
+.wardrobe-item.locked{opacity:0.4}
+.wardrobe-item.equipped{background:rgba(247,201,72,0.04);border-color:rgba(247,201,72,0.15)}
+.wardrobe-item-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:1px solid;flex-shrink:0}
+.wardrobe-item-info{flex:1;min-width:0}
+.wardrobe-item-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wardrobe-item-rarity{font-size:9px;color:rgba(255,255,255,0.2)}
+.wardrobe-item-bonus{font-size:9px;color:rgba(255,255,255,0.15)}
+.wardrobe-equip-badge{position:absolute;top:4px;right:6px;width:18px;height:18px;background:#f7c948;color:#060610;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.wardrobe-own-badge{width:8px;height:8px;border-radius:50%;background:#10b981;position:absolute;top:6px;right:8px}
+.wardrobe-lock-icon{position:absolute;top:6px;right:8px;font-size:12px;opacity:0.5}
+/* ─── Casino ─── */
+.casino-screen{background:#060610;min-height:100vh}
+.casino-scroll{padding:8px 10px 80px}
+.casino-banner{text-align:center;padding:20px 16px;margin-bottom:12px;background:linear-gradient(135deg,rgba(247,201,72,0.04),rgba(168,85,247,0.04));border-radius:12px;border:1px solid rgba(247,201,72,0.08);position:relative;overflow:hidden}
+.casino-banner-glow{position:absolute;top:50%;left:50%;width:200px;height:200px;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(247,201,72,0.03),transparent 70%)}
+.casino-banner-text{font-size:18px;font-weight:700;color:#f7c948;position:relative}
+.casino-banner-sub{font-size:10px;color:rgba(255,255,255,0.25);margin-top:4px;position:relative}
+.casino-rates{margin-bottom:12px;background:rgba(255,255,255,0.02);border-radius:10px;padding:8px;border:1px solid rgba(255,255,255,0.04)}
+.casino-rate-row{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:10px}
+.casino-rate-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.casino-rate-name{flex:1;font-weight:500}
+.casino-rate-chance{color:rgba(255,255,255,0.25);min-width:36px;text-align:right}
+.casino-rate-bonus{color:rgba(255,255,255,0.15);min-width:70px;text-align:right}
+.casino-actions{display:flex;gap:8px;margin-top:12px}
+.casino-btn{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all 0.2s}
+.casino-btn:active{transform:scale(0.96)}
+.casino-btn-single{border-color:rgba(59,130,246,0.2);background:rgba(59,130,246,0.04)}
+.casino-btn-ten{border-color:rgba(247,201,72,0.2);background:rgba(247,201,72,0.04)}
+.casino-btn-price{font-size:14px;font-weight:700;color:#f7c948}
+.casino-btn-label{font-size:10px;color:rgba(255,255,255,0.3)}
+.casino-mason-balance{text-align:center;margin-top:12px;font-size:11px;color:#f7c948}
+/* ─── Outfit Notification ─── */
+.outfit-notification{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;transition:all 0.5s cubic-bezier(0.34,1.56,0.64,1);opacity:0;transform:translateX(-50%) translateY(-20px) scale(0.9);pointer-events:none}
+.outfit-notification.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.outfit-notif-glow{position:absolute;top:-20px;left:-20px;right:-20px;bottom:-20px;border-radius:20px;opacity:0.08;filter:blur(20px)}
+.outfit-notif-content{display:flex;align-items:center;gap:10px;background:rgba(6,6,16,0.95);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:10px 14px;backdrop-filter:blur(10px);min-width:220px}
+.outfit-notif-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;border:1px solid;flex-shrink:0}
+.outfit-notif-info{flex:1}
+.outfit-notif-title{font-size:9px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px}
+.outfit-notif-name{font-size:13px;font-weight:600}
+.outfit-notif-rarity{font-size:9px;color:rgba(255,255,255,0.2)}
+/* ─── Toast ─── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9998;background:rgba(6,6,16,0.95);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:8px 14px;font-size:11px;color:#fff;backdrop-filter:blur(10px);transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);opacity:0;transform:translateX(-50%) translateY(20px);pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ─── Mason Feed Button ─── */
+.mason-fab{position:absolute;bottom:70px;right:50%;transform:translateX(50px);display:flex;align-items:center;gap:4px;background:rgba(247,201,72,0.04);border:1px solid rgba(247,201,72,0.08);border-radius:8px;padding:4px 8px;cursor:pointer;transition:all 0.2s;z-index:10}
+.mason-fab-icon{font-size:14px;color:#f7c948}
+.mason-fab-label{font-size:8px;color:rgba(247,201,72,0.4);white-space:nowrap}
+.mason-fab:active{transform:translateX(50px) scale(0.92)}

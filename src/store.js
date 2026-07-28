@@ -1,4 +1,4 @@
-import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS, SCROLL_TYPES, MERGE_FIELD_CONFIG, QUEST_CONFIG } from './config.js';
+import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS, SCROLL_TYPES, MERGE_FIELD_CONFIG, QUEST_CONFIG, OUTFIT_ITEMS, OUTFIT_SLOTS, OUTFIT_RARITIES, SET_BONUS, OUTFIT_DROP_RATES, MASON_EARN, COLLAB_SKINS } from './config.js';
 import { getOrCreateUserId, saveUserData, loadUserData } from './firebase.js';
 import { getLang } from './i18n.js';
 
@@ -78,6 +78,14 @@ const defaultState = () => ({
   mergeField: new Array(49).fill(null),
   mergeFieldUnlocked: [23, 24, 25, 30, 31, 32],
   mergeDragSource: null,
+  // Outfit system
+  outfitInventory: [],
+  equippedOutfit: {},
+  activeCollabSkin: null,
+  lastMasonFeedTime: 0,
+  masonFeedCount: 0,
+  masonBalance: 0,
+  currentMasonFeedCost: MASON_EARN.feedCostBase,
 });
 
 class Store {
@@ -673,8 +681,10 @@ class Store {
     this._state.questScrolls = [];
     this._state.upgradeLevels.quests_completed = (this._state.upgradeLevels.quests_completed || 0) + 1;
     this.addIllumineusXp(10);
+    // Roll outfit drop
+    const outfitDrop = this.rollOutfitDrop();
     this.save();
-    return scrolls;
+    return { scrolls, outfitDrop };
   }
 
   getQuestProgress() {
@@ -891,6 +901,158 @@ class Store {
   getRouletteCost() {
     const spins = this._state.rouletteSpins || 0;
     return Math.floor(500 * Math.pow(1.05, Math.min(spins, 50)));
+  }
+
+  /* ─── Outfit System ─── */
+
+  getOutfitItemsBySlot(slot) {
+    return OUTFIT_ITEMS.filter(i => i.slot === slot);
+  }
+
+  getOwnedOutfits() {
+    return this._state.outfitInventory;
+  }
+
+  getOwnedOutfitsBySlot(slot) {
+    return this._state.outfitInventory.filter(i => i.slot === slot);
+  }
+
+  isOutfitOwned(itemId) {
+    return this._state.outfitInventory.some(i => i.id === itemId);
+  }
+
+  equipOutfit(itemId) {
+    const item = this._state.outfitInventory.find(i => i.id === itemId);
+    if (!item) return false;
+    if (this._state.activeCollabSkin) this._state.activeCollabSkin = null;
+    this._state.equippedOutfit[item.slot] = itemId;
+    this.save();
+    return true;
+  }
+
+  unequipOutfit(slot) {
+    delete this._state.equippedOutfit[slot];
+    this.save();
+    return true;
+  }
+
+  equipCollabSkin(skinId) {
+    const skin = COLLAB_SKINS.find(s => s.id === skinId);
+    if (!skin) return false;
+    if (!this._state.outfitInventory.some(i => i.id === 'skin_' + skinId)) return false;
+    this._state.activeCollabSkin = skinId;
+    this.save();
+    return true;
+  }
+
+  getEquippedOutfitBonus() {
+    // Returns per-click mason earning bonus
+    if (this._state.activeCollabSkin) {
+      const skin = COLLAB_SKINS.find(s => s.id === this._state.activeCollabSkin);
+      return skin ? skin.bonus : 0;
+    }
+    let total = 0;
+    let fullSetCount = 0;
+    const rarityCounts = {};
+    for (const slot of OUTFIT_SLOTS) {
+      const itemId = this._state.equippedOutfit[slot];
+      if (!itemId) continue;
+      const item = OUTFIT_ITEMS.find(i => i.id === itemId);
+      if (!item) continue;
+      const rarityDef = OUTFIT_RARITIES.find(r => r.id === item.rarity);
+      if (rarityDef) {
+        total += rarityDef.bonus;
+        rarityCounts[item.rarity] = (rarityCounts[item.rarity] || 0) + 1;
+      }
+    }
+    // Full set bonus (all 6 slots same rarity)
+    for (const r of OUTFIT_RARITIES) {
+      if ((rarityCounts[r.id] || 0) >= 6) {
+        const setIdx = OUTFIT_RARITIES.findIndex(r2 => r2.id === r.id);
+        if (setIdx >= 0) total *= SET_BONUS[setIdx] || 1;
+      }
+    }
+    return total;
+  }
+
+  getPerClickMasonEarn() {
+    return MASON_EARN.basePerFeed + this.getEquippedOutfitBonus();
+  }
+
+  canFeedMason() {
+    const now = Date.now();
+    const cooldownPassed = (now - this._state.lastMasonFeedTime) >= MASON_EARN.cooldownMs;
+    if (cooldownPassed) {
+      // Reset feed count after cooldown
+      if (this._state.lastMasonFeedTime > 0) {
+        this._state.masonFeedCount = 0;
+        this._state.currentMasonFeedCost = MASON_EARN.feedCostBase;
+      }
+      return true;
+    }
+    return this._state.apeBalance >= this._state.currentMasonFeedCost;
+  }
+
+  feedMason() {
+    const now = Date.now();
+    const cooldownPassed = (now - this._state.lastMasonFeedTime) >= MASON_EARN.cooldownMs;
+    if (cooldownPassed && this._state.lastMasonFeedTime > 0) {
+      this._state.masonFeedCount = 0;
+      this._state.currentMasonFeedCost = MASON_EARN.feedCostBase;
+    }
+    const cost = this._state.currentMasonFeedCost;
+    if (this._state.apeBalance < cost) return null;
+    this._state.apeBalance -= cost;
+    this._state.masonFeedCount++;
+    this._state.lastMasonFeedTime = now;
+    this._state.currentMasonFeedCost = MASON_EARN.feedCostBase + this._state.masonFeedCount * MASON_EARN.feedCostPerClick;
+    const earned = this.getPerClickMasonEarn();
+    this._state.masonBalance += earned;
+    if (this._state.masonBalance >= 1) {
+      const whole = Math.floor(this._state.masonBalance);
+      this._state.masonBalance -= whole;
+      this._state.masonCount += whole;
+    }
+    this.addIllumineusXp(2);
+    this.save();
+    return { cost, earned, feedCount: this._state.masonFeedCount };
+  }
+
+  getMasonFeedTimeLeft() {
+    const elapsed = Date.now() - this._state.lastMasonFeedTime;
+    const remaining = MASON_EARN.cooldownMs - elapsed;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  // Drop random outfit item (from quest completion)
+  rollOutfitDrop() {
+    const r = Math.random();
+    let cumulative = 0;
+    let chosenRarity = null;
+    for (const drop of OUTFIT_DROP_RATES) {
+      cumulative += drop.chance;
+      if (r < cumulative) { chosenRarity = drop.rarity; break; }
+    }
+    if (!chosenRarity || chosenRarity === 'nothing') return null;
+    const pool = OUTFIT_ITEMS.filter(i => i.rarity === chosenRarity && !this.isOutfitOwned(i.id));
+    if (pool.length === 0) {
+      // All items of this rarity owned — give a duplicate for sell value
+      const dupPool = OUTFIT_ITEMS.filter(i => i.rarity === chosenRarity);
+      if (dupPool.length === 0) return null;
+      const dup = dupPool[Math.floor(Math.random() * dupPool.length)];
+      return { ...dup, duplicate: true, sellValue: Math.floor(chosenRarity === 'common' ? 10 : chosenRarity === 'uncommon' ? 50 : chosenRarity === 'rare' ? 200 : chosenRarity === 'epic' ? 1000 : chosenRarity === 'legendary' ? 5000 : 25000) };
+    }
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    this._state.outfitInventory.push({ ...item });
+    this.save();
+    return { ...item, duplicate: false };
+  }
+
+  // Quest now also drops outfit
+  _origGenerateScroll = null;
+
+  outfitAwareGenerateScroll() {
+    // Override generateScroll to also drop outfit items
   }
 
   /* ─── Utils ─── */

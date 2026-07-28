@@ -419,6 +419,122 @@ export const WORLDS = [
   },
 ];
 
+// ─── OUTFIT SYSTEM (100+ items, 6 slots, 6 rarities) ───
+// Slots: helmet, chest, pants, shoes, weapon, accessory
+// Rarities: common, uncommon, rare, epic, legendary, secret
+// Bonus: mason tokens per click for wearing this item
+export const OUTFIT_SLOTS = ['helmet', 'chest', 'pants', 'shoes', 'weapon', 'accessory'];
+export const OUTFIT_RARITIES = [
+  { id: 'common', name: 'Common', nameRu: 'Обычный', bonus: 0.0005, color: '#78716c' },
+  { id: 'uncommon', name: 'Uncommon', nameRu: 'Необычный', bonus: 0.001, color: '#10b981' },
+  { id: 'rare', name: 'Rare', nameRu: 'Редкий', bonus: 0.0025, color: '#3b82f6' },
+  { id: 'epic', name: 'Epic', nameRu: 'Эпический', bonus: 0.005, color: '#a855f7' },
+  { id: 'legendary', name: 'Legendary', nameRu: 'Легендарный', bonus: 0.01, color: '#f7c948' },
+  { id: 'secret', name: 'Secret', nameRu: 'Секретный', bonus: 0.02, color: '#ef4444' },
+];
+export const SET_BONUS = [1.0, 1.1, 1.25, 1.5, 2.0, 3.0]; // per full set of each rarity
+
+// Collab/epic skins (override full appearance)
+export const COLLAB_SKINS = [
+  { id: 'jedi', name: 'Jedi Master', nameRu: 'Мастер Джедай', sprite: S + '/person_purple.png', rarity: 'epic', bonus: 0.01 },
+  { id: 'sith', name: 'Sith Lord', nameRu: 'Лорд Ситх', sprite: S + '/person_yellow.png', rarity: 'epic', bonus: 0.01 },
+  { id: 'tmnt', name: 'TMNT Leader', nameRu: 'Черепашка-Мутант', sprite: S + '/Illumineus_Warning.png', rarity: 'epic', bonus: 0.01 },
+  { id: 'ninja', name: 'Shadow Ninja', nameRu: 'Теневой Ниндзя', sprite: S + '/person_transparent.png', rarity: 'epic', bonus: 0.01 },
+  { id: 'viking', name: 'Viking Jarl', nameRu: 'Ярл Викинг', sprite: S + '/CharactersStage02-sheet-ipadhd_0.png', rarity: 'epic', bonus: 0.01 },
+  { id: 'samurai', name: 'Samurai Lord', nameRu: 'Самурай', sprite: S + '/CharactersStage03-sheet-ipadhd_0.png', rarity: 'epic', bonus: 0.01 },
+  { id: 'wizard', name: 'Grand Sorcerer', nameRu: 'Великий Чародей', sprite: S + '/Illumineus_End_Bright.png', rarity: 'legendary', bonus: 0.02 },
+  { id: 'cyber', name: 'Cyber Knight', nameRu: 'Кибер-Рыцарь', sprite: S + '/CharactersStage04-sheet-ipadhd_0.png', rarity: 'legendary', bonus: 0.02 },
+  { id: 'angel', name: 'Fallen Angel', nameRu: 'Падший Ангел', sprite: S + '/Illumineus_Wellcome.png', rarity: 'secret', bonus: 0.05 },
+  { id: 'void', name: 'Void Walker', nameRu: 'Странник Бездны', sprite: S + '/person_purple.png', rarity: 'secret', bonus: 0.05 },
+];
+
+// Generator for item names
+function makeItems(count, slot, rarity, names) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${slot}_${rarity}_${i}`,
+    slot, rarity,
+    name: names[i % names.length].en + (i >= names.length ? ` ${i+1}` : ''),
+    nameRu: names[i % names.length].ru + (i >= names.length ? ` ${i+1}` : ''),
+  }));
+}
+
+const H = {
+  en: ['Initiate Hood','Bronze Helm','Silver Visor','Shadow Cap','Black Beret','Dark Crown','Onyx Helm','Iron Mask','Golden Circlet','Crystal Crown','Rune Helm','Mithril Cap','Obsidian Crown','Emerald Helm','Sapphire Crown','Diamond Diadem','Ruby Crown','Eternal Mask','Void Crown','Divine Halo','Storm Helm','Night Hood','Dusk Visor','Solar Crown', 'Chaos Helm', 'Ancient Crown', 'Thunder Mask', 'Frost Crown', 'Blaze Helm'],
+  ru: ['Капюшон Посвящённого','Бронзовый Шлем','Серебряное Забрало','Теневой Колпак','Чёрный Берет','Тёмная Корона','Ониксовый Шлем','Железная Маска','Золотой Обруч','Кристальная Корона','Рунический Шлем','Мифриловый Колпак','Обсидиановая Корона','Изумрудный Шлем','Сапфировая Корона','Алмазная Диадема','Рубиновая Корона','Вечная Маска','Корона Бездны','Божественный Ореол','Штормовой Шлем','Ночной Капюшон','Сумеречное Забрало','Солнечная Корона','Шлем Хаоса','Древняя Корона','Маска Грома','Ледяная Корона','Пламенный Шлем']
+};
+
+const C = {
+  en: ['Robe of Order','Leather Tunic','Chainmail','Shadow Cloak','Black Vest','Bronze Armor','Silver Plate','Mithril Coat','Golden Breastplate','Crystal Robe','Rune Mail','Emerald Vest','Obsidian Armor','Sapphire Cloak','Diamond Plate','Ruby Robe','Eternal Chestguard','Void Cloak','Divine Armor','Storm Plate','Night Coat','Dusk Robe','Solar Breastplate','Chaos Armor','Ancient Mail','Thunder Cloak','Frost Plate'],
+  ru: ['Мантия Порядка','Кожаный Доспех','Кольчуга','Плащ Тени','Чёрный Жилет','Бронзовая Броня','Серебряная Чешуя','Мифриловый Плащ','Золотой Нагрудник','Кристальная Мантия','Руническая Кольчуга','Изумрудный Жилет','Обсидиановая Броня','Сапфировый Плащ','Алмазная Чушуя','Рубиновая Мантия','Вечный Доспех','Плащ Бездны','Божественная Броня','Штормовая Чешуя','Ночной Плащ','Сумеречная Мантия','Солнечный Нагрудник','Доспех Хаоса','Древняя Кольчуга','Плащ Грома','Ледяная Броня']
+};
+
+const P = {
+  en: ['Rugged Trousers','Silk Leggings','Iron Greaves','Shadow Legs','Black Chaps','Bronze Legs','Silver Leggings','Mithril Greaves','Golden Tassets','Crystal Legs','Rune Trousers','Emerald Legs','Obsidian Greaves','Sapphire Legs','Diamond Leggings','Ruby Tassets','Eternal Greaves','Void Legs','Divine Trousers','Storm Legs','Night Leggings','Dusk Greaves','Solar Tassets','Chaos Legs','Ancient Leggings','Frost Greaves'],
+  ru: ['Потёртые Штаны','Шёлковые Поножи','Железные Наголенники','Теневые Штаны','Чёрные Краги','Бронзовые Поножи','Серебряные Наголенники','Мифриловые Брони','Золотые Набедренники','Кристальные Поножи','Рунические Штаны','Изумрудные Поножи','Обсидиановые Наголенники','Сапфировые Поножи','Алмазные Наголенники','Рубиновые Набедренники','Вечные Брони','Штаны Бездны','Божественные Штаны','Штормовые Поножи','Ночные Наголенники','Сумеречные Брони','Солнечные Набедренники','Поножи Хаоса','Древние Наголенники','Ледяные Поножи']
+};
+
+const S2 = {
+  en: ['Old Boots','Leather Boots','Iron Sabatons','Shadow Slippers','Black Shoes','Bronze Boots','Silver Sabatons','Mithril Boots','Golden Sandals','Crystal Boots','Rune Sabatons','Emerald Shoes','Obsidian Boots','Sapphire Sabatons','Diamond Shoes','Ruby Sandals','Eternal Boots','Void Sabatons','Divine Sandals','Storm Boots','Night Shoes','Dusk Sabatons','Solar Boots','Chaos Boots','Ancient Sandals','Frost Boots'],
+  ru: ['Старые Сапоги','Кожаные Сапоги','Железные Сабатоны','Теневые Тапки','Чёрные Башмаки','Бронзовые Сапоги','Серебряные Сабатоны','Мифриловые Сапоги','Золотые Сандалии','Кристальные Сапоги','Рунические Сабатоны','Изумрудные Башмаки','Обсидиановые Сапоги','Сапфировые Сaбатоны','Алмазные Башмаки','Рубиновые Сандалии','Вечные Сапоги','Сабатоны Бездны','Божественные Сандалии','Штормовые Сапоги','Ночные Башмаки','Сумеречные Сабатоны','Солнечные Сапоги','Сапоги Хаоса','Древние Сандалии','Ледяные Сапоги']
+};
+
+const W = {
+  en: ['Wooden Staff','Bronze Dagger','Silver Sword','Shadow Blade','Black Rod','Iron Mace','Mithril Sword','Golden Staff','Crystal Wand','Rune Blade','Emerald Dagger','Obsidian Sword','Sapphire Staff','Diamond Wand','Ruby Mace','Eternal Blade','Void Staff','Divine Wand','Storm Hammer','Night Blade','Dusk Staff','Solar Sword','Chaos Mace','Ancient Blade','Thunder Staff','Frost Blade','Voidhammer'],
+  ru: ['Деревянный Посох','Бронзовый Кинжал','Серебряный Меч','Клинок Тени','Чёрный Жезл','Железная Булава','Мифриловый Меч','Золотой Посох','Кристальная Палочка','Рунический Клинок','Изумрудный Кинжал','Обсидиановый Меч','Сапфировый Посох','Алмазная Палочка','Рубиновая Булава','Вечный Клинок','Посох Бездны','Божественная Палочка','Штормовой Молот','Ночной Клинок','Сумеречный Посох','Солнечный Меч','Булава Хаоса','Древний Клинок','Посох Грома','Ледяной Клинок','Молот Бездны']
+};
+
+const A = {
+  en: ['Initiate Ring','Bronze Amulet','Silver Pendant','Shadow Gem','Black Talisman','Iron Ring','Mithril Amulet','Golden Pendant','Crystal Gem','Rune Ring','Emerald Pendant','Obsidian Amulet','Sapphire Ring','Diamond Pendant','Ruby Gem','Eternal Ring','Void Amulet','Divine Pendant','Storm Gem','Night Talisman','Dusk Ring','Solar Pendant','Chaos Gem','Ancient Ring','Thunder Amulet','Frost Pendant'],
+  ru: ['Кольцо Посвящённого','Бронзовый Амулет','Серебряная Подвеска','Теневой Самоцвет','Чёрный Талисман','Железное Кольцо','Мифриловый Амулет','Золотая Подвеска','Кристальный Самоцвет','Руническое Кольцо','Изумрудная Подвеска','Обсидиановый Амулет','Сапфировое Кольцо','Алмазная Подвеска','Рубиновый Самоцвет','Вечное Кольцо','Амулет Бездны','Божественная Подвеска','Штормовой Самоцвет','Ночной Талисман','Сумеречное Кольцо','Солнечная Подвеска','Самоцвет Хаоса','Древнее Кольцо','Амулет Грома','Ледяная Подвеска']
+};
+
+const SLOT_NAMES = { H, C, P: P, S: S2, W, A };
+function genItems(slotKey, names, countPerRarity) {
+  const items = [];
+  const rarities = ['common','uncommon','rare','epic','legendary','secret'];
+  rarities.forEach((r, ri) => {
+    for (let i = 0; i < countPerRarity[ri]; i++) {
+      const idx = (ri * 5 + i) % names.en.length;
+      items.push({
+        id: `${slotKey}_${r}_${i}`,
+        slot: slotKey,
+        rarity: r,
+        name: names.en[idx] + (i >= 5 ? ` #${i+1}` : ''),
+        nameRu: names.ru[idx] + (i >= 5 ? ` #${i+1}` : ''),
+      });
+    }
+  });
+  return items;
+}
+
+export const OUTFIT_ITEMS = [
+  ...genItems('helmet', H, [7, 6, 5, 4, 3, 2]),
+  ...genItems('chest', C, [7, 6, 5, 4, 3, 2]),
+  ...genItems('pants', P, [6, 5, 4, 3, 2, 2]),
+  ...genItems('shoes', S2, [6, 5, 4, 3, 2, 2]),
+  ...genItems('weapon', W, [7, 6, 5, 4, 3, 2]),
+  ...genItems('accessory', A, [6, 5, 4, 3, 2, 2]),
+];
+// Total: 27+24+20+18+24+18 = 131 items
+
+export const OUTFIT_DROP_RATES = [
+  { rarity: 'common', chance: 0.40 },
+  { rarity: 'uncommon', chance: 0.25 },
+  { rarity: 'rare', chance: 0.15 },
+  { rarity: 'epic', chance: 0.08 },
+  { rarity: 'legendary', chance: 0.03 },
+  { rarity: 'secret', chance: 0.01 },
+  { rarity: 'nothing', chance: 0.08 },
+];
+
+export const MASON_EARN = {
+  basePerFeed: 0.001,
+  feedCostBase: 2,
+  feedCostPerClick: 0.5,
+  cooldownHours: 9,
+  cooldownMs: 9 * 60 * 60 * 1000,
+};
+
 export const SCROLL_TYPES = [
   { id: 'common', name: 'Common Scroll', nameRu: 'Обычный Свиток', color: '#78716c', glow: 'rgba(120,113,108,0.3)', baseValue: 10, mergeCount: 3 },
   { id: 'uncommon', name: 'Uncommon Scroll', nameRu: 'Необычный Свиток', color: '#10b981', glow: 'rgba(16,185,129,0.3)', baseValue: 50, mergeCount: 3 },

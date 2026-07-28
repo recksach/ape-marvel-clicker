@@ -1,5 +1,5 @@
 import { store } from './store.js';
-import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, SUPPORT_URL, TG_BOT, ILLUMINEUS, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, CLONE_PORTRAITS, SECTION_SPRITES, STAR_SPRITES, TUTORIAL_STEPS, ICONS, ANIMATIONS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS, WORLD_BACKGROUNDS } from './config.js';
+import { WORLDS, TAP_UPGRADES, GLOBAL_UPGRADES, SUPPORT_URL, TG_BOT, ILLUMINEUS, COSTUMES, AD_BOOSTS, STAR_REQUIREMENTS, CLONE_PORTRAITS, SECTION_SPRITES, STAR_SPRITES, TUTORIAL_STEPS, ICONS, ANIMATIONS, MASON_CONFIG, STARS_SHOP, PORTAL_CHARACTERS, WORLD_BACKGROUNDS, OUTFIT_ITEMS, OUTFIT_SLOTS, OUTFIT_RARITIES, SET_BONUS, OUTFIT_DROP_RATES, MASON_EARN, COLLAB_SKINS } from './config.js';
 import { initTelegram, getTelegramUser, isInsideTelegram } from './telegram.js';
 import { initWallet, connectWallet, buyApe, sellApe } from './wallet.js';
 import { t, initLang, setLang, getLang } from './i18n.js';
@@ -13,7 +13,9 @@ const NAV_ICONS = {
   clones: './assets/illuminati/sprites/Section_Clones_Common.png',
   boosts: './assets/illuminati/sprites/video_ads_icon.png',
   scrolls: './assets/illuminati/sprites/bronzeStar.png',
+  wardrobe: './assets/illuminati/sprites/person_purple.png',
   masons: './assets/illuminati/sprites/goldStar.png',
+  casino: './assets/illuminati/sprites/diamond_ad_icon.png',
   wallet: './assets/illuminati/sprites/diamond.png',
 };
 
@@ -64,7 +66,9 @@ function navHTML(active) {
     { key: 'clones', label: t('navClones'), screen: 'clones' },
     { key: 'boosts', label: t('navBoosts'), screen: 'ads' },
     { key: 'scrolls', label: t('scrollTitle'), screen: 'scrolls' },
+    { key: 'wardrobe', label: t('navWardrobe'), screen: 'wardrobe' },
     { key: 'masons', label: t('navMasons'), screen: 'masons' },
+    { key: 'casino', label: t('navCasino'), screen: 'casino' },
     { key: 'wallet', label: t('navWallet'), screen: 'wallet' },
   ];
   return `<div class="bottomnav">
@@ -225,6 +229,10 @@ function showGame() {
         ` : ''}
         <div class="quest-fab" id="questFab" onclick="W._nav('scrolls')">
           <span class="quest-fab-icon">📜</span>
+        </div>
+        <div class="mason-fab" id="masonFab" onclick="W._feedMason()">
+          <span class="mason-fab-icon">⬡</span>
+          <div class="mason-fab-label">${t('feedMason')}</div>
         </div>
         <div class="roulette-fab" id="rouletteFab" onclick="W._openRoulette()">
           <span class="roulette-fab-icon">🎰</span>
@@ -673,6 +681,8 @@ function show() {
     case 'masons': showMasons(); break;
     case 'wallet': showWallet(); break;
     case 'scrolls': showScrolls(); break;
+    case 'wardrobe': showWardrobe(); break;
+    case 'casino': showCasino(); break;
     default: showAuth();
   }
   if (currentScreen !== 'auth' && currentScreen !== 'loading') {
@@ -914,7 +924,7 @@ function stopGameLoop() {
 
 /* ─── Global Handlers ─── */
 window.W = {};
-window.W._nav = (s) => { currentScreen = s; show(); if (s === 'game') startGameLoop(); else stopGameLoop(); };
+window.W._nav = (s) => { currentScreen = s; show(); if (s === 'game') startGameLoop(); else stopGameLoop(); showDailyBonus(); };
 window.W._tg = () => { const u = initTelegram(); if (u) { store.setTgUser(u); currentScreen='game'; show(); startGameLoop(); playClick(); } };
 window.W._skip = () => { store.setDemoMode(); currentScreen = 'game'; show(); startGameLoop(); playClick(); showDailyBonus(); };
 window.W._authWallet = async () => { await store.initFirebaseUser(); currentScreen = 'game'; show(); startGameLoop(); playClick(); showDailyBonus(); };
@@ -949,8 +959,13 @@ window.W._startQuest = () => {
   if (store.startQuest()) { playBuy(); showScrolls(); }
 };
 window.W._collectScrolls = () => {
-  const scrolls = store.collectQuestScrolls();
-  if (scrolls.length > 0) { playWin(); show(); }
+  const result = store.collectQuestScrolls();
+  if (result.scrolls.length > 0) { playWin(); }
+  if (result.outfitDrop && !result.outfitDrop.duplicate) {
+    // Show outfit notification
+    showOutfitNotification(result.outfitDrop);
+  }
+  show();
 };
 window.W._placeScroll = (scrollId) => {
   const slot = store.state.mergeField.findIndex((item, i) => !item && store.isSlotUnlocked(i));
@@ -1146,6 +1161,210 @@ function updateComboDisplay() {
   el.style.transform = 'scale(1.2)';
   clearTimeout(el._hideTimer);
   el._hideTimer = setTimeout(() => { el.style.opacity = '0'; }, 1500);
+}
+
+/* ─── Wardrobe Screen ─── */
+function showWardrobe() {
+  const s = store.state;
+  const isEquipped = (slot, itemId) => s.equippedOutfit[slot] === itemId;
+  const ownedIds = s.outfitInventory.map(i => i.id);
+  document.getElementById('app').innerHTML = `
+    <div class="screen active wardrobe-screen">
+      ${topbarHTML(t('navWardrobe'), '#a855f7')}
+      <div class="wardrobe-scroll">
+        ${OUTFIT_SLOTS.map(slot => `
+          <div class="wardrobe-section">
+            <div class="wardrobe-section-title">${t('outfitSlot_' + slot)}</div>
+            <div class="wardrobe-items">
+              ${OUTFIT_ITEMS.filter(i => i.slot === slot).map(item => {
+                const owned = ownedIds.includes(item.id);
+                const equipped = isEquipped(slot, item.id);
+                const rarityDef = OUTFIT_RARITIES.find(r => r.id === item.rarity);
+                const color = rarityDef ? rarityDef.color : '#fff';
+                return `
+                  <div class="wardrobe-item ${owned?'owned':'locked'} ${equipped?'equipped':''}" style="border-color:${color}40" onclick="${owned && !equipped ? `W._equipOutfit('${item.id}')` : equipped ? `W._unequipOutfit('${slot}')` : ''}">
+                    <div class="wardrobe-item-icon" style="background:${color}22;border-color:${color}">${item.name[0]}</div>
+                    <div class="wardrobe-item-info">
+                      <div class="wardrobe-item-name" style="color:${color}">${getLang()==='ru'?item.nameRu:item.name}</div>
+                      <div class="wardrobe-item-rarity">${t('rarity_' + item.rarity)}</div>
+                      <div class="wardrobe-item-bonus">+${(rarityDef ? rarityDef.bonus : 0).toFixed(4)} ⬡/click</div>
+                    </div>
+                    ${equipped ? '<div class="wardrobe-equip-badge">✓</div>' : owned ? '<div class="wardrobe-own-badge">●</div>' : '<div class="wardrobe-lock-icon">🔒</div>'}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+        ${COLLAB_SKINS.length > 0 ? `
+          <div class="wardrobe-section">
+            <div class="wardrobe-section-title">${t('collabSkins')}</div>
+            <div class="wardrobe-items">
+              ${COLLAB_SKINS.map(skin => {
+                const owned = ownedIds.includes('skin_' + skin.id);
+                const active = s.activeCollabSkin === skin.id;
+                const rarityDef = OUTFIT_RARITIES.find(r => r.id === skin.rarity);
+                const color = rarityDef ? rarityDef.color : '#f7c948';
+                return `
+                  <div class="wardrobe-item ${owned?'owned':'locked'} ${active?'equipped':''}" style="border-color:${color}40" onclick="${owned && !active ? `W._equipCollab('${skin.id}')` : ''}">
+                    <div class="wardrobe-item-icon" style="background:${color}22;border-color:${color};font-size:10px">✦</div>
+                    <div class="wardrobe-item-info">
+                      <div class="wardrobe-item-name" style="color:${color}">${getLang()==='ru'?skin.nameRu:skin.name}</div>
+                      <div class="wardrobe-item-rarity">${t('rarity_' + skin.rarity)}</div>
+                      <div class="wardrobe-item-bonus">${t('collabSkin')} +${skin.bonus.toFixed(4)} ⬡/click</div>
+                    </div>
+                    ${active ? '<div class="wardrobe-equip-badge">✓</div>' : owned ? '<div class="wardrobe-own-badge">●</div>' : '<div class="wardrobe-lock-icon">🔒</div>'}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+      ${navHTML('wardrobe')}
+    </div>`;
+}
+
+/* ─── Casino / Gacha Screen ─── */
+function showCasino() {
+  const s = store.state;
+  const singleCost = 100;
+  const tenCost = 900;
+  document.getElementById('app').innerHTML = `
+    <div class="screen active casino-screen">
+      ${topbarHTML(t('navCasino'), '#f7c948')}
+      <div class="casino-scroll">
+        <div class="casino-banner">
+          <div class="casino-banner-glow"></div>
+          <div class="casino-banner-text">${t('casinoTitle')}</div>
+          <div class="casino-banner-sub">${t('casinoSub')}</div>
+        </div>
+        <div class="casino-rates">
+          ${OUTFIT_RARITIES.map((r, i) => {
+            const dropDef = OUTFIT_DROP_RATES.find(d => d.rarity === r.id);
+            const chance = dropDef ? (dropDef.chance * 100).toFixed(1) : '0';
+            return `<div class="casino-rate-row" style="color:${r.color}">
+              <span class="casino-rate-dot" style="background:${r.color}"></span>
+              <span class="casino-rate-name">${t('rarity_' + r.id)}</span>
+              <span class="casino-rate-chance">${chance}%</span>
+              <span class="casino-rate-bonus">+${r.bonus.toFixed(4)} ⬡/clk</span>
+            </div>`;
+          }).join('')}
+          <div class="casino-rate-row" style="color:#666">
+            <span class="casino-rate-dot" style="background:#666"></span>
+            <span class="casino-rate-name">${t('nothing')}</span>
+            <span class="casino-rate-chance">${(OUTFIT_DROP_RATES.find(d=>d.rarity==='nothing')?.chance*100||8).toFixed(1)}%</span>
+          </div>
+        </div>
+        <div class="casino-actions">
+          <button class="casino-btn casino-btn-single" onclick="W._gachaPull(1)">
+            <span class="casino-btn-price">${singleCost} 💎</span>
+            <span class="casino-btn-label">${t('pullOnce')}</span>
+          </button>
+          <button class="casino-btn casino-btn-ten" onclick="W._gachaPull(10)">
+            <span class="casino-btn-price">${tenCost} 💎</span>
+            <span class="casino-btn-label">${t('pullTen')}</span>
+          </button>
+        </div>
+        ${s.masonBalance > 0 ? `<div class="casino-mason-balance">⬡ ${t('masonBalance')}: ${s.masonBalance.toFixed(4)}</div>` : ''}
+      </div>
+      ${navHTML('casino')}
+    </div>`;
+}
+
+/* ─── Outfit Drop Notification ─── */
+function showOutfitNotification(item) {
+  const rarityDef = OUTFIT_RARITIES.find(r => r.id === item.rarity);
+  const color = rarityDef ? rarityDef.color : '#fff';
+  const el = document.createElement('div');
+  el.className = 'outfit-notification';
+  el.innerHTML = `
+    <div class="outfit-notif-glow" style="background:${color}"></div>
+    <div class="outfit-notif-content">
+      <div class="outfit-notif-icon" style="border-color:${color};color:${color}">${item.name[0]}</div>
+      <div class="outfit-notif-info">
+        <div class="outfit-notif-title">${t('outfitFound')}</div>
+        <div class="outfit-notif-name" style="color:${color}">${getLang()==='ru'?item.nameRu:item.name}</div>
+        <div class="outfit-notif-rarity">${t('rarity_' + item.rarity)} ${t('outfitSlot_' + item.slot)}</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => { el.classList.add('show'); }, 50);
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 500);
+  }, 3500);
+}
+
+/* ─── Mason Feed Handler ─── */
+window.W._feedMason = () => {
+  const result = store.feedMason();
+  if (result === null) {
+    const timeLeft = store.getMasonFeedTimeLeft();
+    if (timeLeft > 0) {
+      const hrs = Math.floor(timeLeft / 3600000);
+      const mins = Math.floor((timeLeft % 3600000) / 60000);
+      showToast(t('masonCooldown', hrs, mins));
+    } else {
+      showToast(t('masonNoApe'));
+    }
+    return;
+  }
+  playBuy();
+  showToast(`${t('masonEarned')} ${result.earned.toFixed(4)} ⬡`);
+  show();
+};
+
+/* ─── Gacha Pull Handler ─── */
+window.W._gachaPull = (count) => {
+  const s = store.state;
+  const cost = count === 1 ? 100 : 900;
+  if (s.diamonds < cost) { showToast(t('notEnoughDiamonds')); return; }
+  s.diamonds -= cost;
+  let items = [];
+  for (let i = 0; i < count; i++) {
+    const drop = store.rollOutfitDrop();
+    if (drop && !drop.duplicate) items.push(drop);
+  }
+  store.save();
+  playBuy();
+  if (items.length > 0) {
+    items.forEach(item => showOutfitNotification(item));
+  } else {
+    showToast(t('gachaNothing'));
+  }
+  show();
+};
+
+window.W._equipOutfit = (itemId) => {
+  store.equipOutfit(itemId);
+  show();
+};
+
+window.W._unequipOutfit = (slot) => {
+  store.unequipOutfit(slot);
+  show();
+};
+
+window.W._equipCollab = (skinId) => {
+  store.equipCollabSkin(skinId);
+  show();
+};
+
+/* ─── Toast ─── */
+function showToast(msg) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
 /* ─── Init ─── */
