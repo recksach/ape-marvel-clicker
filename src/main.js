@@ -563,16 +563,12 @@ function showMasons() {
 
 function showScrolls() {
   const s = store.state;
+  const cols = MERGE_FIELD_CONFIG.cols;
+  const rows = MERGE_FIELD_CONFIG.rows;
   const questCost = s.questFeedCost;
   const canFeed = s.apeBalance >= questCost && !s.questActive;
-  const fieldData = [];
-  for (let i = 0; i < s.mergeFieldUnlocked; i++) {
-    fieldData.push({ index: i, item: s.mergeField[i], selected: s.mergeSelected === i });
-  }
-  const lockedSlots = s.mergeField.length - s.mergeFieldUnlocked;
-  const unlockCost = store.getMergeSlotUnlockCost();
-  const canUnlock = store.canUnlockMergeSlot() && s.apeBalance >= unlockCost;
   const scrollCount = s.scrollInventory.length;
+  const totalSlotValue = s.mergeField.reduce((sum, item, i) => item && store.isSlotUnlocked(i) ? sum + item.value : sum, 0);
 
   let html = `<div class="screen active">
     ${topbarHTML(t('scrollTitle'), '#10b981')}
@@ -584,12 +580,9 @@ function showScrolls() {
         <div class="quest-info">
           <p>${t('questSub')}</p>
           ${s.questActive && !s.questCompleted ? `
-            <div class="quest-progress-bar" style="margin:10px 0">
-              <div class="quest-progress-label">${t('questInProgress')}</div>
-              <div class="quest-progress-track">
-                <div class="quest-progress-fill" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div>
-              </div>
-              <div class="quest-progress-time">${Math.ceil(store.getQuestTimeLeft()/1000)}s</div>
+            <div class="quest-progress-inline">
+              <div class="quest-progress-track"><div class="quest-progress-fill" style="width:${(store.getQuestProgress()*100).toFixed(0)}%"></div></div>
+              <span class="quest-progress-timer">${Math.ceil(store.getQuestTimeLeft()/1000)}s</span>
             </div>
           ` : s.questCompleted ? `
             <div class="quest-complete-large" onclick="W._collectScrolls()">
@@ -605,52 +598,64 @@ function showScrolls() {
         </div>
       </div>
 
-      <div class="section-header-img" style="margin-top:16px">
+      <div class="section-header-img" style="margin-top:12px">
         <span>📦 ${t('scrollInventory')} (${scrollCount})</span>
       </div>
       <div class="scroll-inventory">
         ${scrollCount === 0 ? `<div class="empty-state">${t('scrollEmpty')}</div>` :
-          s.scrollInventory.slice(0, 20).map(sc => {
+          s.scrollInventory.slice(0, 30).map(sc => {
             const st = SCROLL_TYPES.find(t => t.id === sc.type) || SCROLL_TYPES[0];
-            return `<div class="scroll-item" style="border-color:${st.color};background:${st.glow}08">
+            return `<div class="scroll-item" style="border-color:${st.color};background:${st.glow}08"
+              draggable="false"
+              onclick="W._placeScroll('${sc.id}')">
               <div class="scroll-item-icon" style="color:${st.color}">📜</div>
               <div class="scroll-item-info">
                 <div class="scroll-item-name" style="color:${st.color}">${st.name}</div>
-                <div class="scroll-item-value">${fmt(sc.value)} $APE</div>
+                <div class="scroll-item-value">${fmt(sc.value)}</div>
               </div>
             </div>`;
           }).join('')}
       </div>
 
-      <div class="section-header-img" style="margin-top:16px">
-        <span>🔮 ${t('mergeField')}</span>
+      <div class="section-header-img" style="margin-top:12px">
+        <span>🔮 ${t('mergeField')} <span style="font-size:10px;color:rgba(255,255,255,0.2);font-weight:400">(${s.mergeFieldUnlocked.length}/${MERGE_FIELD_CONFIG.maxSlots} • ${fmt(totalSlotValue)} A)</span></span>
       </div>
-      <div class="merge-field-grid">
-        ${fieldData.map(fd => {
-          const st = fd.item ? (SCROLL_TYPES.find(t => t.id === fd.item.type) || SCROLL_TYPES[0]) : null;
-          return `<div class="merge-slot ${fd.selected ? 'selected' : ''} ${!fd.item ? 'empty' : ''}"
-            onclick="${fd.item ? `W._selectMerge(${fd.index})` : ''}">
-            ${fd.item ? `
-              <div class="merge-slot-item" style="border-color:${st.color};background:${st.glow}15">
-                <span style="color:${st.color};font-size:18px">📜</span>
-                <span style="color:${st.color};font-size:9px">${st.name.slice(0,6)}</span>
-                <span style="color:rgba(255,255,255,0.3);font-size:7px">${fmt(fd.item.value)}</span>
+      <div class="merge-field-grid-7" id="mergeGrid">
+        ${Array.from({length: rows * cols}, (_, i) => {
+          const row = Math.floor(i / cols);
+          const col = i % cols;
+          const unlocked = store.isSlotUnlocked(i);
+          const item = s.mergeField[i];
+          const st = item ? (SCROLL_TYPES.find(t => t.id === item.type) || SCROLL_TYPES[0]) : null;
+          const isDrag = s.mergeDragSource === i;
+          const isCenter = row >= 2 && row <= 4 && col >= 2 && col <= 4;
+          const cost = unlocked ? 0 : store.getSlotUnlockCost(i);
+          const canBuy = !unlocked && s.apeBalance >= cost;
+          return `<div class="merge-slot-7 ${unlocked ? 'unlocked' : 'locked'} ${isDrag ? 'dragging' : ''} ${item ? 'filled' : 'empty'}"
+            data-index="${i}"
+            ${!unlocked ? `onclick="W._buyMergeSlot(${i})"` : ''}
+            ondragstart="W._dragStart(${i})" ondragover="event.preventDefault()" ondrop="W._dragDrop(${i})"
+            ontouchstart="W._touchStart(event, ${i})" ontouchend="W._touchEnd(event, ${i})"
+            style="${!unlocked && canBuy ? 'cursor:pointer' : ''}">
+            ${unlocked && item ? `
+              <div class="ms7-item" style="border-color:${st.color};background:${st.glow}15" draggable="true">
+                <div class="ms7-icon" style="color:${st.color}">📜</div>
+                <div class="ms7-label" style="color:${st.color}">${st.name.slice(0,8)}</div>
+                <div class="ms7-value">${fmt(item.value)}</div>
               </div>
-            ` : ''}
-          </div>`;
-        }).join('')}
-        ${Array.from({length: lockedSlots}, (_, i) => {
-          const cost = store.getMergeSlotUnlockCost();
-          return `<div class="merge-slot locked" onclick="W._unlockMergeSlot()">
-            <div class="merge-lock-icon">🔒</div>
-            ${canUnlock ? `<div class="merge-unlock-cost">${fmt(cost)}</div>` : ''}
+            ` : unlocked && !item ? `
+              <div class="ms7-empty">+</div>
+            ` : `
+              <div class="ms7-locked">
+                <span class="ms7-lock-icon">🔒</span>
+                ${canBuy ? `<span class="ms7-cost">${fmt(cost)}</span>` : ''}
+              </div>
+            `}
           </div>`;
         }).join('')}
       </div>
-      ${canUnlock ? `<button class="btn-sm btn-buy" onclick="W._unlockMergeSlot()" style="margin:8px auto;display:block">🔓 ${t('mergeUnlock')} ${fmt(unlockCost)} $APE</button>` : ''}
-      ${!canUnlock && lockedSlots === 0 ? `<div class="empty-state" style="margin-top:8px">${t('mergeMax')}</div>` : ''}
-      <button class="btn-lg btn-primary" onclick="W._redeemScrolls()" style="margin-top:10px">
-        💰 ${t('scrollRedeem')}
+      <button class="btn-lg btn-primary" onclick="W._redeemAll()" style="margin-top:10px" ${totalSlotValue === 0 ? 'disabled style="opacity:0.3"' : ''}>
+        💰 ${t('scrollRedeem')} ${totalSlotValue > 0 ? '— ' + fmt(totalSlotValue) + ' A' : ''}
       </button>
     </div>
     ${navHTML('scrolls')}
@@ -947,16 +952,64 @@ window.W._collectScrolls = () => {
   const scrolls = store.collectQuestScrolls();
   if (scrolls.length > 0) { playWin(); show(); }
 };
-window.W._selectMerge = (index) => {
-  const result = store.selectMergeSlot(index);
-  if (result && typeof result === 'boolean' && result) playBuy();
+window.W._placeScroll = (scrollId) => {
+  const slot = store.state.mergeField.findIndex((item, i) => !item && store.isSlotUnlocked(i));
+  if (slot === -1) return;
+  const scroll = store.state.scrollInventory.find(s => s.id === scrollId);
+  if (!scroll) return;
+  store.state.mergeField[slot] = { ...scroll };
+  store.state.scrollInventory = store.state.scrollInventory.filter(s => s.id !== scrollId);
+  store.save();
+  playClick();
   showScrolls();
 };
-window.W._unlockMergeSlot = () => {
-  if (store.unlockMergeSlot()) { playBuy(); showScrolls(); }
+// Drag-drop (mouse)
+window.W._dragStart = (idx) => {
+  const item = store.mergeFieldSetDrag(idx);
+  if (!item) return;
+  document.querySelectorAll('.merge-slot-7').forEach(el => el.classList.toggle('drag-over', false));
+  const target = document.querySelector(`.merge-slot-7[data-index="${idx}"]`);
+  if (target) target.classList.add('dragging');
 };
-window.W._redeemScrolls = () => {
-  const total = store.getScrollsForRedeem();
+window.W._dragDrop = (idx) => {
+  if (store.state.mergeDragSource === null) return;
+  const result = store.mergeFieldDrop(idx);
+  store.save();
+  if (result.merged) playWin();
+  else playClick();
+  showScrolls();
+};
+// Drag-drop (touch)
+let _touchDragIdx = null;
+window.W._touchStart = (ev, idx) => {
+  if (!store.isSlotUnlocked(idx) || !store.state.mergeField[idx]) return;
+  _touchDragIdx = idx;
+};
+window.W._touchEnd = (ev, idx) => {
+  const src = _touchDragIdx;
+  _touchDragIdx = null;
+  if (src === null || src === idx) return;
+  if (!store.isSlotUnlocked(idx)) {
+    // Try to unlock this slot
+    W._buyMergeSlot(idx);
+    return;
+  }
+  store.mergeFieldSetDrag(src);
+  const result = store.mergeFieldDrop(idx);
+  store.save();
+  if (result.merged) playWin();
+  else if (result.moved || result.swapped) playClick();
+  showScrolls();
+};
+window.W._buyMergeSlot = (idx) => {
+  if (store.isSlotUnlocked(idx)) return;
+  if (store.unlockSlot(idx)) {
+    playBuy();
+    showScrolls();
+  }
+};
+window.W._redeemAll = () => {
+  const total = store.redeemAllScrolls();
   if (total > 0) { playWin(); showScrolls(); }
 };
 

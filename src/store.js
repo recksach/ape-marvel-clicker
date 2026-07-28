@@ -22,7 +22,7 @@ function fmt(n) {
 }
 
 const defaultState = () => ({
-  apeBalance: 0,
+  apeBalance: 10,
   diamonds: 0,
   totalApeEarned: 0,
   currentWorld: 0,
@@ -75,10 +75,9 @@ const defaultState = () => ({
   questCompleted: false,
   questScrolls: [],
   scrollInventory: [],
-  mergeFieldSlots: 9,
-  mergeFieldUnlocked: 9,
-  mergeField: new Array(9).fill(null),
-  mergeSelected: null,
+  mergeField: new Array(49).fill(null),
+  mergeFieldUnlocked: [23, 24, 25, 30, 31, 32],
+  mergeDragSource: null,
 });
 
 class Store {
@@ -690,119 +689,91 @@ class Store {
     return Math.max(0, this._state.questDuration - elapsed);
   }
 
-  /* ─── Merge Field ─── */
+  /* ─── Merge Field (Drag-Drop, 7×7) ─── */
 
-  getMergeFieldSlotIndex(row, col) {
-    const cols = MERGE_FIELD_CONFIG.baseCols;
-    return row * cols + col;
+  isSlotUnlocked(index) {
+    return this._state.mergeFieldUnlocked.includes(index);
   }
 
-  getMergeFieldDims() {
+  getSlotUnlockCost(index) {
     const unlocked = this._state.mergeFieldUnlocked;
-    const baseCols = MERGE_FIELD_CONFIG.baseCols;
-    const rows = Math.ceil(unlocked / baseCols);
-    return { rows, cols: baseCols, total: unlocked };
+    const order = [...Array(49).keys()].filter(i => !unlocked.includes(i));
+    const pos = order.indexOf(index);
+    if (pos === -1) return Infinity;
+    const costs = MERGE_FIELD_CONFIG.slotCosts;
+    return pos < costs.length ? costs[pos] : Math.floor(costs[costs.length - 1] * Math.pow(1.5, pos - costs.length + 1));
   }
 
-  isMergeSlotUnlocked(index) {
-    return index < this._state.mergeFieldUnlocked;
-  }
-
-  canUnlockMergeSlot() {
-    const total = this._state.mergeField.length;
-    return this._state.mergeFieldUnlocked < total;
-  }
-
-  getMergeSlotUnlockCost() {
-    const next = this._state.mergeFieldUnlocked;
-    if (next >= this._state.mergeField.length) return Infinity;
-    return Math.floor(MERGE_FIELD_CONFIG.slotUnlockCost * Math.pow(MERGE_FIELD_CONFIG.slotUnlockMult, next - 8));
-  }
-
-  unlockMergeSlot() {
-    if (!this.canUnlockMergeSlot()) return false;
-    const cost = this.getMergeSlotUnlockCost();
-    if (this._state.apeBalance < cost) return false;
+  unlockSlot(index) {
+    const cost = this.getSlotUnlockCost(index);
+    if (cost === Infinity || this._state.apeBalance < cost) return false;
+    if (this.isSlotUnlocked(index)) return false;
     this._state.apeBalance -= cost;
-    this._state.mergeFieldUnlocked++;
+    this._state.mergeFieldUnlocked.push(index);
     this.save();
     return true;
   }
 
-  placeScrollOnField(scrollId, slotIndex) {
-    const scroll = this._state.scrollInventory.find(s => s.id === scrollId);
-    if (!scroll) return false;
-    if (slotIndex >= this._state.mergeFieldUnlocked) return false;
-    if (this._state.mergeField[slotIndex] !== null) return false;
-    this._state.mergeField[slotIndex] = { ...scroll };
-    this._state.scrollInventory = this._state.scrollInventory.filter(s => s.id !== scrollId);
-    this.save();
-    return true;
+  mergeFieldSetDrag(sourceIndex) {
+    if (!this.isSlotUnlocked(sourceIndex)) return null;
+    if (!this._state.mergeField[sourceIndex]) return null;
+    this._state.mergeDragSource = sourceIndex;
+    return this._state.mergeField[sourceIndex];
   }
 
-  removeScrollFromField(slotIndex) {
-    const item = this._state.mergeField[slotIndex];
-    if (!item) return false;
-    this._state.scrollInventory.push(item);
-    this._state.mergeField[slotIndex] = null;
-    if (this._state.mergeSelected === slotIndex) this._state.mergeSelected = null;
-    this.save();
-    return true;
-  }
-
-  selectMergeSlot(slotIndex) {
-    if (slotIndex >= this._state.mergeFieldUnlocked) return false;
-    if (this._state.mergeField[slotIndex] === null) return false;
-    if (this._state.mergeSelected === slotIndex) {
-      this._state.mergeSelected = null;
-      return false;
-    }
-    if (this._state.mergeSelected !== null) {
-      // Try to merge
-      const result = this.tryMerge(this._state.mergeSelected, slotIndex);
-      this._state.mergeSelected = null;
-      return result;
-    }
-    this._state.mergeSelected = slotIndex;
-    this.save();
-    return false;
-  }
-
-  tryMerge(slotA, slotB) {
-    const a = this._state.mergeField[slotA];
-    const b = this._state.mergeField[slotB];
-    if (!a || !b) return false;
-    if (a.type !== b.type) return false;
-    const st = SCROLL_TYPES.find(s => s.id === a.type);
-    if (!st) return false;
-    if (st.mergeCount < 2) return false;
-    // Get tier index
-    const tierIdx = SCROLL_TYPES.findIndex(s => s.id === a.type);
-    if (tierIdx >= SCROLL_TYPES.length - 1) {
-      // Max tier - just consume and boost value
-      this._state.mergeField[slotA] = null;
-      this._state.mergeField[slotB] = null;
-      this._state.scrollInventory.push({ id: 'scroll_merged_' + Date.now(), type: a.type, value: a.value * 3 });
+  mergeFieldDrop(targetIndex) {
+    const src = this._state.mergeDragSource;
+    this._state.mergeDragSource = null;
+    if (src === null || src === targetIndex) return { merged: false };
+    if (!this.isSlotUnlocked(src) || !this.isSlotUnlocked(targetIndex)) return { merged: false };
+    const a = this._state.mergeField[src];
+    const b = this._state.mergeField[targetIndex];
+    // Drop onto empty slot → move
+    if (!b) {
+      this._state.mergeField[targetIndex] = a;
+      this._state.mergeField[src] = null;
       this.save();
-      return true;
+      return { merged: false, moved: true };
     }
-    // Merge up
-    const nextType = SCROLL_TYPES[tierIdx + 1];
-    this._state.mergeField[slotA] = null;
-    this._state.mergeField[slotB] = null;
-    this._state.scrollInventory.push({ id: 'scroll_merged_' + Date.now(), type: nextType.id, value: nextType.baseValue });
+    // Both have items → try merge
+    if (a.type === b.type) {
+      const st = SCROLL_TYPES.find(s => s.id === a.type);
+      const tierIdx = SCROLL_TYPES.findIndex(s => s.id === a.type);
+      if (st && tierIdx < SCROLL_TYPES.length - 1) {
+        const nextType = SCROLL_TYPES[tierIdx + 1];
+        this._state.mergeField[src] = null;
+        this._state.mergeField[targetIndex] = {
+          id: 'merged_' + Date.now(),
+          type: nextType.id,
+          value: Math.floor(nextType.baseValue * (1 + Math.random() * 0.2))
+        };
+        this.save();
+        return { merged: true, fromType: a.type, toType: nextType.id };
+      } else if (st && tierIdx >= SCROLL_TYPES.length - 1) {
+        // Max tier → boost value
+        this._state.mergeField[src] = null;
+        this._state.mergeField[targetIndex] = { ...a, value: Math.floor(a.value * 2.5) };
+        this.save();
+        return { merged: true, fromType: a.type, toType: a.type, boosted: true };
+      }
+    }
+    // Different types → swap
+    this._state.mergeField[src] = b;
+    this._state.mergeField[targetIndex] = a;
     this.save();
-    return true;
+    return { merged: false, swapped: true };
   }
 
-  getScrollsForRedeem() {
-    // Convert field scrolls to $APE
+  clearDrag() {
+    this._state.mergeDragSource = null;
+  }
+
+  redeemAllScrolls() {
     let total = 0;
-    const field = this._state.mergeField;
-    for (let i = 0; i < field.length; i++) {
-      if (field[i]) {
-        total += field[i].value;
-        field[i] = null;
+    for (let i = 0; i < this._state.mergeField.length; i++) {
+      if (this._state.mergeField[i] && this.isSlotUnlocked(i)) {
+        total += this._state.mergeField[i].value;
+        this._state.mergeField[i] = null;
       }
     }
     if (total > 0) {

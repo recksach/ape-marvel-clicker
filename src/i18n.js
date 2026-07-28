@@ -17,6 +17,7 @@ const LANGS = {
     tutMasons: 'Masons are legendary tokens — only 19,999 exist. Buy with $APE when you reach the endgame.',
     tutStars: 'Upgrade your Clones to earn Stars. Spend Stars in the Boost Shop for powerful effects.',
     tutDone: 'Your empire awaits. Build, upgrade, dominate. The Illuminati never sleeps.',
+    tutMergeSlot: 'Buy a Merge Field slot to place scrolls! Merge same-type scrolls to upgrade them for bigger rewards.',
     tutNext: 'Next',
     tutSkip: 'Skip',
     // Topbar
@@ -183,6 +184,7 @@ const LANGS = {
     tutMasons: 'Масоны — легендарные токены, существует всего 19 999. Покупай за $APE, когда доберёшься до эндгейма.',
     tutStars: 'Улучшай Клонов, чтобы зарабатывать звёзды. Трать звёзды в магазине бустов для мощных эффектов.',
     tutDone: 'Твоя империя ждёт. Строй, улучшай, доминируй. Иллюминаты никогда не спят.',
+    tutMergeSlot: 'Купи слот на Поле Слияния, чтобы размещать свитки! Объединяй свитки одного типа для улучшения.',
     tutNext: 'Далее',
     tutSkip: 'Пропустить',
     income: 'Доход',

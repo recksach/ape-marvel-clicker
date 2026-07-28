@@ -428,12 +428,12 @@ export const SCROLL_TYPES = [
 ];
 
 export const MERGE_FIELD_CONFIG = {
-  baseRows: 3,
-  baseCols: 3,
-  slotUnlockCost: 10000,
-  slotUnlockMult: 2,
-  maxRows: 6,
-  maxCols: 6,
+  rows: 7,
+  cols: 7,
+  // Center 6 slots unlocked by default (indices in 7x7 grid)
+  centerUnlocked: [23, 24, 25, 30, 31, 32],
+  slotCosts: [5, 15, 45, 100, 250, 500, 1000, 2000, 3500, 6000, 10000, 15000, 25000, 40000, 65000, 100000, 150000, 250000, 400000, 650000, 1000000, 1500000, 2500000, 4000000, 6500000, 10000000],
+  maxSlots: 49,
 };
 
 export const QUEST_CONFIG = {
@@ -464,6 +464,7 @@ export const TUTORIAL_STEPS = [
   { textKey: 'tutWelcome', highlight: null, sprite: 'welcome' },
   { textKey: 'tutTap', highlight: '#illuminatusTap', sprite: 'base' },
   { textKey: 'tutFirstClone', highlight: '#navClones', sprite: 'base' },
+  { textKey: 'tutMergeSlot', highlight: '#navScrolls', sprite: 'base' },
   { textKey: 'tutManagers', highlight: null, sprite: 'warning' },
   { textKey: 'tutBoosts', highlight: '#navBoosts', sprite: 'base' },
   { textKey: 'tutWorlds', highlight: '#worldTabs', sprite: 'welcome' },
