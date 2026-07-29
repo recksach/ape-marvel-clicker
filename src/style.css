@@ -764,3 +764,97 @@ img{-webkit-user-drag:none;user-select:none}
 @keyframes particle-fly{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.5)}}
 
 ::-webkit-scrollbar{width:0;height:0}
+
+/* ── DRAG CLONE ── */
+.drag-clone{
+  position:fixed;
+  z-index:50;
+  width:60px;
+  height:60px;
+  pointer-events:none;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  background:rgba(26,21,53,.85);
+  border:2px solid var(--gold);
+  box-shadow:0 0 20px var(--gold),0 8px 20px #000a;
+  transform:scale(1.1);
+  transition:transform .1s;
+}
+.drag-clone-img{
+  width:48px;
+  height:48px;
+  object-fit:contain;
+  filter:drop-shadow(0 2px 4px #000a);
+}
+.drag-clone-level{
+  position:absolute;
+  top:2px;
+  left:4px;
+  font-size:9px;
+  font-weight:800;
+  color:var(--gold);
+  background:#0a081acc;
+  border-radius:4px;
+  padding:1px 3px;
+}
+
+/* ── MERGE HINTS ── */
+.cell.merge-hint{
+  outline:2px dashed var(--gold);
+  outline-offset:-2px;
+  animation:hint-pulse 1s ease-in-out infinite;
+}
+@keyframes hint-pulse{
+  0%,100%{box-shadow:0 0 8px var(--gold)}
+  50%{box-shadow:0 0 16px var(--gold)}
+}
+.cell.dragging{
+  opacity:.3;
+  transform:scale(.85);
+}
+
+/* ── GORILLA SCROLL ── */
+.gorillas-section{
+  margin-bottom:16px;
+}
+.gorilla-carousel-wrap{
+  display:flex;
+  overflow-x:auto;
+  scroll-snap-type:x mandatory;
+  gap:12px;
+  padding:8px 4px;
+  -ms-overflow-style:none;
+  scrollbar-width:none;
+  scroll-behavior:smooth;
+}
+.gorilla-carousel-wrap::-webkit-scrollbar{display:none}
+.gorilla-carousel-wrap .gorilla-card{
+  flex:0 0 calc(100% - 24px);
+  scroll-snap-align:center;
+}
+.carousel-dots{
+  display:flex;
+  justify-content:center;
+  gap:6px;
+  margin-top:10px;
+}
+.carousel-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#2d2655;
+  transition:all .2s;
+}
+.carousel-dot.active{
+  background:var(--gold);
+  width:20px;
+  border-radius:4px;
+}
+.carousel-arrow-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:20px;
+  margin-top:8px;
+}

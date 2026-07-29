@@ -1,2 +1,2 @@
-.dumbbell { touch-action: none; }
-.dumbbell.touching { transform: scale(1.12); opacity: .8; }
+.drag-clone { touch-action: none; }
+.cell { touch-action: none; }

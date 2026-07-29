@@ -232,7 +232,47 @@ function inventory() {
 function bindGrid() {
   const cells = document.querySelectorAll('#merge-grid .cell:not(.locked)');
   let dragIdx = null;
+  let dragClone = null;
   let dragStart = null;
+  let highlightCells = [];
+
+  function clearHighlights() {
+    highlightCells.forEach(c => c.classList.remove('merge-hint'));
+    highlightCells = [];
+  }
+
+  function showMergeHints(level) {
+    clearHighlights();
+    cells.forEach(c => {
+      const idx = parseInt(c.dataset.idx);
+      if (state.grid[idx] === level && idx !== dragIdx) {
+        c.classList.add('merge-hint');
+        highlightCells.push(c);
+      }
+    });
+  }
+
+  function createDragClone(cell, x, y) {
+    const lv = state.grid[parseInt(cell.dataset.idx)];
+    if (!lv) return null;
+    const clone = document.createElement('div');
+    clone.className = 'drag-clone';
+    clone.innerHTML = `<img src="${image(lv)}" class="drag-clone-img" /><span class="drag-clone-level">${lv}</span>`;
+    clone.style.left = (x - 30) + 'px';
+    clone.style.top = (y - 30) + 'px';
+    document.body.appendChild(clone);
+    return clone;
+  }
+
+  function moveDragClone(x, y) {
+    if (!dragClone) return;
+    dragClone.style.left = (x - 30) + 'px';
+    dragClone.style.top = (y - 30) + 'px';
+  }
+
+  function removeDragClone() {
+    if (dragClone) { dragClone.remove(); dragClone = null; }
+  }
 
   cells.forEach(cell => {
     cell.addEventListener('pointerdown', e => {
@@ -241,6 +281,14 @@ function bindGrid() {
       dragIdx = idx;
       dragStart = { x: e.clientX, y: e.clientY };
       cell.classList.add('dragging');
+      dragClone = createDragClone(cell, e.clientX, e.clientY);
+      showMergeHints(state.grid[idx]);
+      e.preventDefault();
+    });
+
+    cell.addEventListener('pointermove', e => {
+      if (dragIdx === null) return;
+      moveDragClone(e.clientX, e.clientY);
       e.preventDefault();
     });
 
@@ -250,6 +298,8 @@ function bindGrid() {
       const targetCell = document.querySelector(`#merge-grid .cell[data-idx="${targetIdx}"]`);
       if (targetCell && targetCell.classList.contains('locked')) {
         dragIdx = null;
+        removeDragClone();
+        clearHighlights();
         cell.classList.remove('dragging');
         return;
       }
@@ -260,17 +310,39 @@ function bindGrid() {
       if (dragIdx === targetIdx && moved < 10) {
         showDumbbellDetail(state.grid[dragIdx]);
         dragIdx = null;
+        removeDragClone();
+        clearHighlights();
         cell.classList.remove('dragging');
         return;
       }
       tryMerge(dragIdx, targetIdx);
       dragIdx = null;
+      removeDragClone();
+      clearHighlights();
       cells.forEach(c => c.classList.remove('dragging'));
     });
 
-    cell.addEventListener('pointerleave', () => {
-      cell.classList.remove('dragging');
+    cell.addEventListener('pointercancel', () => {
+      dragIdx = null;
+      removeDragClone();
+      clearHighlights();
+      cells.forEach(c => c.classList.remove('dragging'));
     });
+  });
+
+  document.addEventListener('pointermove', e => {
+    if (dragIdx !== null) {
+      moveDragClone(e.clientX, e.clientY);
+    }
+  });
+
+  document.addEventListener('pointerup', () => {
+    if (dragIdx !== null) {
+      dragIdx = null;
+      removeDragClone();
+      clearHighlights();
+      cells.forEach(c => c.classList.remove('dragging'));
+    }
   });
 
   const queueItems = document.querySelectorAll('#queue-items .q-item');
@@ -352,28 +424,36 @@ function gorillas() {
   }).join('');
 
   let carouselHtml = '';
-  if (current) {
-    const r = getRarity(current.rarity);
-    const feedPct = Math.min(100, current.feed);
-    const onCooldown = current.cooldownEnd > Date.now();
-    const cdLeft = onCooldown ? Math.ceil((current.cooldownEnd - Date.now()) / 1000) : 0;
+  if (owned.length > 0) {
     carouselHtml = `
-      <div class="gorilla-card rarity-${r.id}">
-        <div class="gorilla-level-badge">LVL ${current.level} · ${r.name.toUpperCase()}</div>
-        <div class="gorilla-img-wrap">
-          <img src="${getGorillaImg(current.rarity)}" class="gorilla-main-img" draggable="false" />
-        </div>
-        <div class="gorilla-name" style="color:${r.color}">${current.name}</div>
-        <div class="feed-bar-wrap">
-          <div class="feed-bar" style="width:${feedPct}%;background:${r.color}"></div>
-          <span class="feed-pct">${feedPct}%</span>
-        </div>
-        <button class="btn-feed${onCooldown ? ' cooldown' : ''}" data-feed="true" ${onCooldown ? 'disabled' : ''}>
-          ${onCooldown ? `СБРОС ЧЕРЕЗ ${formatTime(cdLeft)}` : '🍽 КОРМИТЬ 🍌 75'}
-        </button>
-        ${onCooldown ? `<div class="cooldown-overlay"><div class="timer">${formatTime(cdLeft)}</div><div class="label">Кулдаун кормления</div></div>` : ''}
+      <div class="gorilla-carousel-wrap" id="gorilla-carousel">
+        ${owned.map((g, i) => {
+          const r = getRarity(g.rarity);
+          const feedPct = Math.min(100, g.feed);
+          const onCooldown = g.cooldownEnd > Date.now();
+          const cdLeft = onCooldown ? Math.ceil((g.cooldownEnd - Date.now()) / 1000) : 0;
+          return `
+            <div class="gorilla-card rarity-${r.id}" data-gidx="${i}">
+              <div class="gorilla-level-badge">LVL ${g.level} · ${r.name.toUpperCase()}</div>
+              <div class="gorilla-img-wrap">
+                <img src="${getGorillaImg(g.rarity)}" class="gorilla-main-img" draggable="false" />
+              </div>
+              <div class="gorilla-name" style="color:${r.color}">${g.name}</div>
+              <div class="feed-bar-wrap">
+                <div class="feed-bar" style="width:${feedPct}%;background:${r.color}"></div>
+                <span class="feed-pct">${feedPct}%</span>
+              </div>
+              <button class="btn-feed${onCooldown ? ' cooldown' : ''}" data-feed="${i}" ${onCooldown ? 'disabled' : ''}>
+                ${onCooldown ? `СБРОС ЧЕРЕЗ ${formatTime(cdLeft)}` : '🍽 КОРМИТЬ 🍌 75'}
+              </button>
+              ${onCooldown ? `<div class="cooldown-overlay"><div class="timer">${formatTime(cdLeft)}</div><div class="label">Кулдаун кормления</div></div>` : ''}
+            </div>`;
+        }).join('')}
       </div>
-      <div class="carousel-nav">
+      <div class="carousel-dots" id="carousel-dots">
+        ${owned.map((_, i) => `<div class="carousel-dot${i === state.gorillaIndex ? ' active' : ''}" data-dot="${i}"></div>`).join('')}
+      </div>
+      <div class="carousel-arrow-row">
         <button class="arrow-left" data-arrow="left">◀</button>
         <span class="carousel-index">${state.gorillaIndex + 1} / ${owned.length}</span>
         <button class="arrow-right" data-arrow="right">▶</button>
@@ -383,6 +463,7 @@ function gorillas() {
       <div class="gorilla-empty">
         <div class="empty-lock">🔒</div>
         <p>Нет горилл</p>
+        <button class="unlock-btn" data-buy="g1">ПОЛУЧИТЬ НОВЫЙ СЛОТ ⭐ 100</button>
       </div>`;
   }
 
@@ -416,11 +497,21 @@ function bindGorillas() {
 
   document.querySelectorAll('.gorilla-main-img').forEach(img => {
     img.addEventListener('click', () => {
-      const g = state.gorillas[state.gorillaIndex];
+      const card = img.closest('.gorilla-card');
+      if (!card) return;
+      const gidx = parseInt(card.dataset.gidx);
+      const g = state.gorillas[gidx];
       if (g) {
         const shopItem = GORILLA_SHOP.find(s => s.id === g.id) || { id: g.id, name: g.name, rarity: g.rarity, price: 0 };
         showGorillaDetail(shopItem);
       }
+    });
+  });
+
+  document.querySelectorAll('.btn-feed').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const gidx = parseInt(btn.dataset.feed);
+      feedGorilla(gidx);
     });
   });
 
@@ -433,32 +524,54 @@ function bindGorillas() {
         state.gorillaIndex = Math.min(state.gorillas.length - 1, state.gorillaIndex + 1);
       }
       haptic('tab');
-      render();
+      scrollToGorilla();
     });
   });
 
-  const feedBtn = document.querySelector('.btn-feed');
-  if (feedBtn) {
-    feedBtn.addEventListener('click', () => feedGorilla());
-  }
+  document.querySelectorAll('.carousel-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      state.gorillaIndex = parseInt(dot.dataset.dot);
+      haptic('tab');
+      scrollToGorilla();
+    });
+  });
 
-  let touchStartX = 0;
   const carousel = document.getElementById('gorilla-carousel');
   if (carousel) {
-    carousel.addEventListener('pointerdown', e => { touchStartX = e.clientX; });
-    carousel.addEventListener('pointerup', e => {
-      const diff = e.clientX - touchStartX;
-      if (Math.abs(diff) > 50) {
-        if (diff < 0 && state.gorillaIndex < state.gorillas.length - 1) {
-          state.gorillaIndex++;
-        } else if (diff > 0 && state.gorillaIndex > 0) {
-          state.gorillaIndex--;
+    let scrollTimeout;
+    carousel.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const cardWidth = carousel.firstElementChild?.offsetWidth || 300;
+        const gap = 12;
+        const newIndex = Math.round(carousel.scrollLeft / (cardWidth + gap));
+        if (newIndex !== state.gorillaIndex && newIndex >= 0 && newIndex < state.gorillas.length) {
+          state.gorillaIndex = newIndex;
+          updateDots();
         }
-        haptic('tab');
-        render();
-      }
+      }, 100);
     });
   }
+
+  scrollToGorilla();
+}
+
+function scrollToGorilla() {
+  const carousel = document.getElementById('gorilla-carousel');
+  if (!carousel) return;
+  const card = carousel.children[state.gorillaIndex];
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+  updateDots();
+}
+
+function updateDots() {
+  document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === state.gorillaIndex);
+  });
+  const idxEl = document.querySelector('.carousel-index');
+  if (idxEl) idxEl.textContent = `${state.gorillaIndex + 1} / ${state.gorillas.length}`;
 }
 
 function buyGorilla(gid) {
@@ -483,8 +596,8 @@ function buyGorilla(gid) {
   render();
 }
 
-function feedGorilla() {
-  const g = state.gorillas[state.gorillaIndex];
+function feedGorilla(gidx) {
+  const g = state.gorillas[gidx !== undefined ? gidx : state.gorillaIndex];
   if (!g) return;
   if (g.cooldownEnd > Date.now()) { toast('На кулдауне!'); return; }
   if (state.bananas < 75) { toast('Недостаточно бананов!'); haptic('error'); return; }
