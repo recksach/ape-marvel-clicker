@@ -108,6 +108,15 @@ img{-webkit-user-drag:none;user-select:none}
   background:linear-gradient(160deg,#151030,#0d0a1e);
   box-shadow:inset 0 0 30px #070515,0 0 20px #0008;
 }
+.grid-container{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:6px;border:2px solid #2d2655;border-radius:16px;background:linear-gradient(160deg,#151030,#0d0a1e);box-shadow:inset 0 0 30px #070515,0 0 20px #0008}
+.grid-item{aspect-ratio:1;border-radius:10px;border:1px solid #252045;background:linear-gradient(145deg,#1c1640,#110e28);display:grid;place-items:center;position:relative;transition:all .2s;font-size:18px;font-weight:700;color:#fff}
+.grid-item .grid-level{position:absolute;bottom:2px;font-size:7px;color:rgba(255,255,255,.7);font-weight:600}
+.grid-empty{border:1px dashed #252045;background:rgba(12,8,28,.5);cursor:pointer}
+.grid-empty:active{background:#1c1640}
+.grid-locked{background:rgba(40,20,30,.3);border-color:#3a1530;font-size:16px;cursor:default;color:#555}
+.grid-drag{cursor:grab;transition:opacity .3s}
+.grid-drag:active{cursor:grabbing}
+.stack-count{position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#e6a817;color:#1a1535;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px #000a;z-index:2}
 .cell{
   aspect-ratio:1;
   border-radius:10px;
@@ -390,6 +399,77 @@ img{-webkit-user-drag:none;user-select:none}
   cursor:not-allowed;
 }
 
+/* ── NEW GORILLA SCREEN ── */
+.gorilla-screen{padding:12px;display:flex;flex-direction:column;gap:10px;height:100%}
+.gorilla-header{display:flex;flex-direction:column;align-items:center;gap:6px}
+.gorilla-dots{display:flex;gap:6px}
+.gorilla-dot{width:8px;height:8px;border-radius:50%;background:#2d2655;cursor:pointer;transition:all .2s}
+.gorilla-dot.active{background:var(--gold);box-shadow:0 0 8px #e6a81766}
+.gorilla-nav{display:flex;align-items:center;gap:12px;width:100%}
+.gorilla-arrow{width:32px;height:32px;border-radius:50%;background:#1a1535;border:1px solid #2d2655;color:var(--gold);font-size:18px;display:grid;place-items:center;cursor:pointer;transition:all .15s;flex-shrink:0}
+.gorilla-arrow:active{transform:scale(.88)}
+.gorilla-arrow:disabled{opacity:.3;pointer-events:none}
+.gorilla-badges{display:flex;gap:8px;flex:1;justify-content:center;flex-wrap:wrap}
+.gorilla-badges .rarity-badge{font-size:9px;padding:2px 8px}
+.level-badge,.taps-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#0e0a20;border:1px solid #2d2655;color:#b8b0cc}
+.gorilla-info-name{font-size:18px;font-weight:800;text-align:center;color:var(--gold);letter-spacing:.5px}
+.gorilla-card{
+  position:relative;
+  border-radius:20px;
+  background:linear-gradient(160deg,#1a1540,#100d25);
+  border:2px solid #2d2655;
+  padding:16px;
+  text-align:center;
+  overflow:hidden;
+  transition:all .3s;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:200px;
+  box-shadow:0 0 30px var(--glow,#555);
+}
+.gorilla-card::before{
+  content:'';
+  position:absolute;
+  inset:-2px;
+  border-radius:22px;
+  background:conic-gradient(from 0deg,transparent,#7c3aed33,transparent,#ec489933,transparent);
+  z-index:-1;
+  animation:card-glow 4s linear infinite;
+}
+@keyframes card-glow{
+  0%{filter:hue-rotate(0deg)}
+  100%{filter:hue-rotate(360deg)}
+}
+.gorilla-image{height:200px;max-width:90%;object-fit:contain;filter:drop-shadow(0 10px 20px #000a);transition:transform .15s;pointer-events:none;user-select:none;-webkit-user-select:none}
+.training-overlay{position:absolute;inset:0;background:rgba(7,5,15,.7);display:flex;align-items:center;justify-content:center;z-index:2;border-radius:18px}
+.training-timer{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-size:28px;font-weight:800;text-shadow:0 2px 10px #000}
+.training-timer span:first-child{font-size:40px}
+.floating-dumbbells-container{position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:18px}
+.floating-dumbbell{position:absolute;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 12px #000a;animation:db-float 1s ease-in-out infinite alternate}
+@keyframes db-float{0%{transform:translateY(0)}100%{transform:translateY(-8px)}}
+.feed-section{display:flex;flex-direction:column;gap:6px}
+.feed-bar-container{position:relative;height:14px;border-radius:10px;background:#0e0a20;border:1px solid #2d2655;overflow:hidden;display:flex;align-items:center}
+.feed-bar{height:100%;background:linear-gradient(90deg,#e6a817,#ffcc44);border-radius:10px;transition:width .5s ease;min-width:0}
+.feed-text{position:absolute;right:10px;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 3px #0008;z-index:1}
+.tap-info{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:0 4px}
+.gorilla-actions{display:flex;flex-direction:column;gap:8px}
+.train-btn,.collect-btn,.merge-btn{width:100%;padding:12px 16px;border-radius:12px;font-weight:800;font-size:13px;letter-spacing:.5px;border:none;cursor:pointer;transition:all .15s;align-items:center;justify-content:center;gap:6px}
+.train-btn{background:linear-gradient(180deg,#ffe066,#e6a817);color:#1a1535;box-shadow:0 3px #9f7a10}
+.train-btn:active{transform:scale(.96);box-shadow:0 1px #9f7a10}
+.collect-btn{background:linear-gradient(180deg,#66ff88,#2ecc71);color:#1a1535;box-shadow:0 3px #1a8c4a}
+.collect-btn:active{transform:scale(.96);box-shadow:0 1px #1a8c4a}
+.merge-btn{background:linear-gradient(180deg,#bb88ff,#7c3aed);color:#fff;box-shadow:0 3px #5b21b6}
+.merge-btn:active{transform:scale(.96);box-shadow:0 1px #5b21b6}
+.mason-earned{text-align:center;font-size:12px;color:var(--muted);padding:4px}
+.mason-earned span{color:var(--gold);font-weight:700}
+.gorilla-mini-shop{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.shop-btn{width:100%;padding:10px;border-radius:10px;background:#1a1535;border:1px solid #2d2655;color:#b8b0cc;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.shop-btn:active{transform:scale(.94);background:#2d2655}
+.shop-btn:hover{border-color:var(--gold)}
+
 .carousel-nav{
   display:flex;
   align-items:center;
@@ -606,17 +686,25 @@ img{-webkit-user-drag:none;user-select:none}
   text-align:center;
 }
 .clan-crest{font-size:72px;margin-bottom:8px;filter:drop-shadow(0 4px 8px #000a)}
-.clan-name{font-size:18px;font-weight:900;letter-spacing:1px;margin-bottom:12px}
+.clan-header{text-align:center;margin-bottom:16px}
+.clan-icon{font-size:48px;margin-bottom:6px}
+.clan-name{font-size:18px;font-weight:900;letter-spacing:1px;margin-bottom:4px}
+.clan-members{font-size:11px;color:var(--muted)}
 .clan-stats{display:flex;gap:10px;margin-bottom:16px}
 .clan-stat{flex:1;background:#0e0a20;border:1px solid #2d2655;border-radius:10px;padding:10px 6px;text-align:center}
-.clan-stat .stat-val{display:block;font-size:18px;font-weight:900;color:var(--gold)}
-.clan-stat .stat-lbl{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+.clan-stat .stat-value{display:block;font-size:18px;font-weight:900;color:var(--gold)}
+.clan-stat .stat-label{display:block;font-size:9px;color:var(--muted);margin-top:2px}
 .clan-progress-wrap{margin:12px 0}
 .clan-progress-label{font-size:11px;color:var(--muted);margin-bottom:6px}
 .clan-progress-bar{height:8px;border-radius:8px;background:#0e0a20;border:1px solid #2d2655;overflow:hidden}
 .clan-progress-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--purple),var(--pink));transition:width .5s}
 .clan-progress-text{font-size:10px;color:var(--muted);margin-top:4px}
 .clan-bonus{font-size:11px;color:var(--green);font-weight:600;margin-top:12px;padding:8px;background:#0a1a15;border-radius:8px;border:1px solid #1a4a35}
+.clan-raids h3{font-size:14px;font-weight:800;margin-bottom:8px;color:var(--gold)}
+.clan-no-raids{text-align:center;padding:20px;color:var(--muted);font-size:12px;background:#0e0a20;border-radius:10px;border:1px solid #2d2655}
+.reset-section{margin-top:24px;padding-top:16px;border-top:1px solid #2d2655}
+.reset-btn{width:100%;padding:12px;border-radius:10px;background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;transition:all .15s}
+.reset-btn:active{transform:scale(.96)}
 
 .cooldown-overlay{
   position:absolute;
