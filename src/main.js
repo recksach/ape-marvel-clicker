@@ -1070,7 +1070,7 @@ function startTutorial() {
       overlay = document.createElement('div');
       overlay.id = 'tutorial-overlay';
       overlay.innerHTML = `
-        <div class="tutorial-backdrop" onclick="event.stopPropagation()"></div>
+        <div class="tutorial-backdrop"></div>
         <div class="tutorial-highlight"></div>
         <div class="tutorial-card">
           <div class="tutorial-gorilla">🦍👉</div>

@@ -1189,16 +1189,11 @@ img{-webkit-user-drag:none;user-select:none}
   position:fixed;inset:0;z-index:9999;pointer-events:none;
 }
 .tutorial-backdrop{
-  position:absolute;inset:0;background:#000c;pointer-events:auto;
+  position:absolute;inset:0;background:#0008;pointer-events:none;
 }
 .tutorial-highlight{
-  position:absolute;border-radius:12px;box-shadow:0 0 0 9999px #000c;
-  animation:tutorial-pulse 1.5s ease-in-out infinite;
-  z-index:1;
-}
-@keyframes tutorial-pulse{
-  0%,100%{box-shadow:0 0 0 9999px #000c,0 0 0 3px #ffd34e}
-  50%{box-shadow:0 0 0 9999px #000c,0 0 0 6px #4ade80}
+  position:absolute;border-radius:12px;box-shadow:0 0 0 9999px #0008,0 0 0 2px #ffd34e;
+  z-index:1;pointer-events:none;
 }
 .tutorial-card{
   position:absolute;width:280px;background:linear-gradient(180deg,#1a1535,#0f0c20);
