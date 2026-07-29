@@ -13,21 +13,24 @@
   <main class="app-shell">
     <header class="topbar">
       <div class="profile">
-        <img src="assets/gorilla-01.png" alt="" />
-        <div><strong id="clanName">СТАЯ</strong><small id="userLevel">LVL 1</small></div>
+        <div class="profile-avatar">S</div>
+        <div class="profile-info">
+          <strong id="clanName">СТАЯ</strong>
+          <small id="userLevel">LVL 1</small>
+        </div>
       </div>
       <div class="balances">
-        <span>🍌 <b id="bananas">0</b></span>
-        <span>✦ <b id="gems">0</b></span>
+        <span><span class="gem-icon">💎</span> <b id="bananas">0</b></span>
+        <span><span class="star-icon">⭐</span> <b id="gems">0</b></span>
       </div>
     </header>
     <section id="screen" class="screen"></section>
     <nav class="bottom-nav" aria-label="Навигация">
-      <button data-tab="market"><i>⌁</i><span>РЫНОК</span></button>
-      <button data-tab="inventory" class="active"><i>▦</i><span>ИНВЕНТАРЬ</span></button>
-      <button data-tab="gorillas"><i>♛</i><span>ГОРИЛЛЫ</span></button>
-      <button data-tab="clan"><i>♜</i><span>СТАЯ</span></button>
-      <button data-tab="quests"><i>✓</i><span>ЗАДАНИЯ</span></button>
+      <button data-tab="market"><span class="nav-icon">📈</span><span class="nav-label">РЫНОК</span></button>
+      <button data-tab="inventory" class="active"><span class="nav-icon">💎</span><span class="nav-label">ЯЙЦА</span></button>
+      <button data-tab="gorillas"><span class="nav-icon">🦍</span><span class="nav-label">ГОРИЛЛЫ</span></button>
+      <button data-tab="clan"><span class="nav-icon">⚡</span><span class="nav-label">БОГИ</span></button>
+      <button data-tab="quests"><span class="nav-icon">✓</span><span class="nav-label">ЗАДАНИЯ</span><span class="badge" style="display:none"></span></button>
     </nav>
   </main>
   <div id="toast" class="toast" role="status"></div>

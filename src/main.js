@@ -201,13 +201,19 @@ function getOrCreateUserId() {
 }
 
 function inventory() {
+  const lockedCells = [6, 13, 20, 27, 34, 41, 42, 43, 44, 45, 46, 47, 48];
   let gridHtml = '';
   for (let i = 0; i < 49; i++) {
     const lv = state.grid[i] || 0;
-    gridHtml += `<div class="cell" data-idx="${i}">${lv ? item(lv) : ''}</div>`;
+    const locked = lockedCells.includes(i);
+    if (locked) {
+      gridHtml += `<div class="cell locked" data-idx="${i}"></div>`;
+    } else {
+      gridHtml += `<div class="cell${lv ? '' : ''}" data-idx="${i}">${lv ? `<span class="level-badge">${lv}</span>${item(lv)}` : ''}</div>`;
+    }
   }
   let queueHtml = state.queue.map((lv, i) =>
-    `<div class="q-item" data-qidx="${i}">${item(lv)}</div>`
+    `<div class="q-item" data-qidx="${i}">${item(lv)}<span class="q-timer">${i === 0 ? 'Готово' : '02:' + String(27 + i * 3).padStart(2, '0')}</span></div>`
   ).join('');
 
   return `
@@ -218,13 +224,13 @@ function inventory() {
     <div class="grid" id="merge-grid">${gridHtml}</div>
     <p class="hint">Перетащи одинаковые гантели чтобы соединить</p>
     <div class="queue-card">
-      <div class="queue-label">ОЧЕРЕДЬ</div>
+      <div class="queue-label">СЛЕДУЮЩАЯ ГАНТЕЛЬ · В ОЧЕРЕДИ ЕЩЁ ${state.queue.length}</div>
       <div class="queue-items" id="queue-items">${queueHtml}</div>
     </div>`;
 }
 
 function bindGrid() {
-  const cells = document.querySelectorAll('#merge-grid .cell');
+  const cells = document.querySelectorAll('#merge-grid .cell:not(.locked)');
   let dragIdx = null;
   let dragStart = null;
 
@@ -241,6 +247,12 @@ function bindGrid() {
     cell.addEventListener('pointerup', e => {
       if (dragIdx === null) return;
       const targetIdx = parseInt(cell.dataset.idx);
+      const targetCell = document.querySelector(`#merge-grid .cell[data-idx="${targetIdx}"]`);
+      if (targetCell && targetCell.classList.contains('locked')) {
+        dragIdx = null;
+        cell.classList.remove('dragging');
+        return;
+      }
       const dx = e.clientX - (dragStart?.x || 0);
       const dy = e.clientY - (dragStart?.y || 0);
       const moved = Math.abs(dx) + Math.abs(dy);
@@ -271,6 +283,8 @@ function bindGrid() {
 }
 
 function tryMerge(a, b) {
+  const lockedCells = [6, 13, 20, 27, 34, 41, 42, 43, 44, 45, 46, 47, 48];
+  if (lockedCells.includes(b)) return;
   const lvA = state.grid[a];
   const lvB = state.grid[b];
   if (lvA === 0 || lvB === 0) return;
@@ -295,7 +309,11 @@ function tryMerge(a, b) {
 }
 
 function placeFromQueue(qidx) {
-  const emptyIdx = state.grid.indexOf(0);
+  const lockedCells = [6, 13, 20, 27, 34, 41, 42, 43, 44, 45, 46, 47, 48];
+  let emptyIdx = -1;
+  for (let i = 0; i < 49; i++) {
+    if (state.grid[i] === 0 && !lockedCells.includes(i)) { emptyIdx = i; break; }
+  }
   if (emptyIdx === -1) { toast('Сетка заполнена!'); return; }
   state.grid[emptyIdx] = state.queue[qidx];
   state.queue.splice(qidx, 1);
@@ -340,22 +358,20 @@ function gorillas() {
     const onCooldown = current.cooldownEnd > Date.now();
     const cdLeft = onCooldown ? Math.ceil((current.cooldownEnd - Date.now()) / 1000) : 0;
     carouselHtml = `
-      <div class="gorilla-card" style="box-shadow:0 0 20px ${r.glow}, inset 0 0 20px ${r.glow};border:2px solid ${r.color};">
+      <div class="gorilla-card rarity-${r.id}">
+        <div class="gorilla-level-badge">LVL ${current.level} · ${r.name.toUpperCase()}</div>
         <div class="gorilla-img-wrap">
           <img src="${getGorillaImg(current.rarity)}" class="gorilla-main-img" draggable="false" />
         </div>
-        <div class="gorilla-details">
-          <div class="gorilla-name" style="color:${r.color}">${current.name}</div>
-          <div class="rarity-badge" style="background:${r.color}">${r.name}</div>
-          <div class="gorilla-level">Уровень: ${current.level}</div>
-          <div class="feed-bar-wrap">
-            <div class="feed-bar" style="width:${feedPct}%;background:${r.color}"></div>
-            <span class="feed-pct">${feedPct}%</span>
-          </div>
-          <button class="btn-feed${onCooldown ? ' cooldown' : ''}" data-feed="true" ${onCooldown ? 'disabled' : ''}>
-            ${onCooldown ? `Пауза ${formatTime(cdLeft)}` : '🍽 КОРМИТЬ (75 🍌)'}
-          </button>
+        <div class="gorilla-name" style="color:${r.color}">${current.name}</div>
+        <div class="feed-bar-wrap">
+          <div class="feed-bar" style="width:${feedPct}%;background:${r.color}"></div>
+          <span class="feed-pct">${feedPct}%</span>
         </div>
+        <button class="btn-feed${onCooldown ? ' cooldown' : ''}" data-feed="true" ${onCooldown ? 'disabled' : ''}>
+          ${onCooldown ? `СБРОС ЧЕРЕЗ ${formatTime(cdLeft)}` : '🍽 КОРМИТЬ 🍌 75'}
+        </button>
+        ${onCooldown ? `<div class="cooldown-overlay"><div class="timer">${formatTime(cdLeft)}</div><div class="label">Кулдаун кормления</div></div>` : ''}
       </div>
       <div class="carousel-nav">
         <button class="arrow-left" data-arrow="left">◀</button>
