@@ -14,10 +14,10 @@ const GORILLA_NAMES = ['БРУНО','КОНГО','БАНАНА','ГРОМИЛА'
 function getRarity(r) { return RARITIES[r] || RARITIES[0]; }
 
 function getGorillaImg(r, training) {
-  const map = ['common','uncommon','rare','epic','legendary'];
-  const f = map[r] || 'common';
   if (training) return `assets/gorilla-03.png`;
-  return `assets/gorilla-${f}.png`;
+  const map = [1, 1, 2, 2, 3];
+  const num = map[r] || 1;
+  return `assets/gorilla-${num.toString().padStart(2,'0')}.png`;
 }
 
 function image(l) {
@@ -468,8 +468,8 @@ function gorillas() {
   let floatingHtml = '';
   if (state.floatingDumbbells.length > 0) {
     floatingHtml = state.floatingDumbbells.map(db => {
-      const c = ['#8B8B8B','#2ECC71','#3498DB','#9B59B6','#F1C40F'][db.level-1] || '#aaa';
-      return `<div class="floating-dumbbell" style="left:${db.x}%;top:${db.y}%;background:${c}">🏋️</div>`;
+      const num = db.level.toString().padStart(2, '0');
+      return `<div class="floating-dumbbell" style="left:${db.x}%;top:${db.y}%"><img src="assets/dumbbell-${num}.png" class="db-img-sm" draggable="false"></div>`;
     }).join('');
   }
 
@@ -586,19 +586,16 @@ function bindGorillaScreen() {
 
 function inventory() {
   let html = '<div class="grid-container">';
-  const dumbbellImgs = ['','🏋️','🏋️‍♂️','🏋️‍♀️','💪','🔥','⚡','🌟','💎','👑','🌀'];
   for (let i = 0; i < 49; i++) {
     const val = state.grid[i] || 0;
     const locked = isLocked(i);
     if (locked) {
       html += `<div class="grid-item grid-locked" data-idx="${i}">🔒</div>`;
     } else if (val > 0) {
-      const colors = ['#2d2d3d','#3a5a3a','#3a4a6a','#6a3a7a','#8a7a2a','#9a4a5a','#3a7a7a','#4a6a8a','#8a7a4a','#5a3a8a'];
-      const c = colors[val-1] || '#2d2d3d';
-      const icon = dumbbellImgs[val] || '🏋️';
+      const num = val.toString().padStart(2, '0');
       const count = state.gridCounts[i] || 1;
       const countBadge = count > 1 ? `<div class="stack-count">${count}</div>` : '';
-      html += `<div class="grid-item grid-drag" data-idx="${i}" data-level="${val}" style="background:${c};border-color:${c}"><span class="db-icon">${icon}</span><div class="db-level">${val}</div>${countBadge}</div>`;
+      html += `<div class="grid-item grid-drag" data-idx="${i}" data-level="${val}" style="background:linear-gradient(145deg,#1c1640,#110e28)"><img src="assets/dumbbell-${num}.png" class="db-img" draggable="false"><div class="db-level">${val}</div>${countBadge}</div>`;
     } else {
       html += `<div class="grid-item grid-empty" data-idx="${i}"></div>`;
     }
@@ -609,9 +606,8 @@ function inventory() {
   if (state.queue.length > 0) {
     html += '<div class="queue-label">Очередь:</div><div class="queue-items">';
     for (const q of state.queue) {
-      const colors = ['#8B8B8B','#2ECC71','#3498DB','#9B59B6','#F1C40F'];
-      const c = colors[q-1] || '#aaa';
-      html += `<div class="queue-item" style="background:${c}">${q}</div>`;
+      const num = q.toString().padStart(2, '0');
+      html += `<div class="queue-item" style="background:linear-gradient(145deg,#1c1640,#110e28)"><img src="assets/dumbbell-${num}.png" class="db-img-sm" draggable="false"><span class="db-queue-lvl">${q}</span></div>`;
     }
     html += '</div>';
   }
@@ -700,15 +696,10 @@ function bindGrid() {
 
       dragData = { idx, level, count: state.gridCounts[idx] || 1 };
 
-      const dumbbellImgs = ['','🏋️','🏋️‍♂️','🏋️‍♀️','💪','🔥','⚡','🌟','💎','👑','🌀'];
+      const num = level.toString().padStart(2, '0');
       clone = document.createElement('div');
       clone.className = 'drag-clone';
-      const colors = ['#2d2d3d','#3a5a3a','#3a4a6a','#6a3a7a','#8a7a2a','#9a4a5a','#3a7a7a','#4a6a8a','#8a7a4a','#5a3a8a'];
-      const c = colors[level-1] || '#2d2d3d';
-      const icon = dumbbellImgs[level] || '🏋️';
-      clone.style.background = c;
-      clone.style.borderColor = c;
-      clone.innerHTML = `<span style="font-size:24px">${icon}</span><span style="font-size:10px;position:absolute;bottom:2px;right:5px;opacity:.8">${level}</span>`;
+      clone.innerHTML = `<img src="assets/dumbbell-${num}.png" class="drag-clone-img" draggable="false"><span class="drag-clone-level">${level}</span>`;
       clone.style.left = (e.clientX - 30) + 'px';
       clone.style.top = (e.clientY - 30) + 'px';
       document.body.appendChild(clone);
@@ -931,15 +922,14 @@ function clan() {
 }
 
 function showDumbbellDetail(idx, level) {
-  const colors = ['#8B8B8B','#2ECC71','#3498DB','#9B59B6','#F1C40F'];
   const names = ['Обычная','Необычная','Редкая','Эпическая','Легендарная'];
-  const color = colors[level-1] || '#aaa';
+  const num = level.toString().padStart(2, '0');
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
 <div class="modal-content">
   <div class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</div>
-  <div class="dumbbell-preview" style="background:${color}">🏋️</div>
+  <div class="dumbbell-preview"><img src="assets/dumbbell-${num}.png" class="db-img-lg" draggable="false"></div>
   <div class="dumbbell-name">Гантель ${names[level-1] || ''}</div>
   <div class="dumbbell-level">Уровень ${level}</div>
   <div class="dumbbell-actions">
