@@ -663,13 +663,35 @@ function bindGrid() {
 }
 
 function tryMerge(a, b) {
+  if (a === b) return;
   if (isLocked(b)) return;
   const lvA = state.grid[a];
   const lvB = state.grid[b];
+
+  // Пустая клетка → перемещаем
+  if (lvA > 0 && lvB === 0) {
+    state.grid[b] = lvA;
+    state.grid[a] = 0;
+    render();
+    return;
+  }
+
+  // Разные уровни → меняем местами
+  if (lvA > 0 && lvB > 0 && lvA !== lvB) {
+    state.grid[a] = lvB;
+    state.grid[b] = lvA;
+    render();
+    return;
+  }
+
+  // Оба пустых или нет данных → ничего
   if (lvA === 0 || lvB === 0) return;
+
+  // Оба одинаковые
   if (lvA !== lvB) return;
   if (lvA >= 10) return;
 
+  // Слияние
   state.grid[b] = lvA + 1;
   state.grid[a] = 0;
 
@@ -684,7 +706,7 @@ function tryMerge(a, b) {
   updateQuestProgress('bananas');
   render();
 
-  // Flash animation on merged cell
+  // Анимация
   setTimeout(() => {
     const mergedCell = document.querySelector(`#merge-grid .cell[data-idx="${b}"]`);
     if (mergedCell) {
@@ -692,6 +714,35 @@ function tryMerge(a, b) {
       setTimeout(() => mergedCell.classList.remove('merged'), 400);
     }
   }, 50);
+
+  // Авто-цепочка: после слияния ищем ещё пары и сливаем
+  setTimeout(() => autoChainMerge(), 300);
+}
+
+// Авто-слияние: сканирует сетку и сливает все возможные пары
+function autoChainMerge() {
+  let merged = false;
+  for (let level = 1; level < 10; level++) {
+    const indices = [];
+    for (let i = 0; i < 49; i++) {
+      if (state.grid[i] === level && !isLocked(i)) indices.push(i);
+    }
+    while (indices.length >= 2) {
+      const a = indices.pop();
+      const b = indices.pop();
+      state.grid[b] = level + 1;
+      state.grid[a] = 0;
+      const earned = Math.floor(level * 5 + Math.pow(level, 1.3) * 2);
+      state.bananas += earned;
+      state.totalBananasEarned += earned;
+      merged = true;
+    }
+  }
+  if (merged) {
+    render();
+    // Рекурсивно проверяем ещё раз
+    setTimeout(() => autoChainMerge(), 200);
+  }
 }
 
 function placeFromQueue(qidx) {
