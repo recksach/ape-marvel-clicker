@@ -103,7 +103,7 @@ function animateValue(el, start, end, duration) {
 function generateLockedCells() {
   const locked = [];
   const patterns = [
-    [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48],
+    [6,7,13,14,20,21,27,28,34,35,41,42],
     [3,4,5,6,10,11,12,13,17,18,19,20,24,25,26,27,31,32,33,34,38,39,40,41,45,46,47,48],
     [0,1,2,7,8,9,14,15,16,21,22,23,28,29,30,35,36,37,42,43,44],
     [0,6,7,13,14,20,21,27,28,34,35,41,42,48],
@@ -586,17 +586,19 @@ function bindGorillaScreen() {
 
 function inventory() {
   let html = '<div class="grid-container">';
+  const dumbbellImgs = ['','🏋️','🏋️‍♂️','🏋️‍♀️','💪','🔥','⚡','🌟','💎','👑','🌀'];
   for (let i = 0; i < 49; i++) {
     const val = state.grid[i] || 0;
     const locked = isLocked(i);
     if (locked) {
       html += `<div class="grid-item grid-locked" data-idx="${i}">🔒</div>`;
     } else if (val > 0) {
-      const colors = ['#8B8B8B','#2ECC71','#3498DB','#9B59B6','#F1C40F'];
-      const c = colors[val-1] || '#aaa';
+      const colors = ['#2d2d3d','#3a5a3a','#3a4a6a','#6a3a7a','#8a7a2a','#9a4a5a','#3a7a7a','#4a6a8a','#8a7a4a','#5a3a8a'];
+      const c = colors[val-1] || '#2d2d3d';
+      const icon = dumbbellImgs[val] || '🏋️';
       const count = state.gridCounts[i] || 1;
       const countBadge = count > 1 ? `<div class="stack-count">${count}</div>` : '';
-      html += `<div class="grid-item grid-drag" data-idx="${i}" data-level="${val}" style="background:${c}">${val}<div class="grid-level">LVL ${val}</div>${countBadge}</div>`;
+      html += `<div class="grid-item grid-drag" data-idx="${i}" data-level="${val}" style="background:${c};border-color:${c}"><span class="db-icon">${icon}</span><div class="db-level">${val}</div>${countBadge}</div>`;
     } else {
       html += `<div class="grid-item grid-empty" data-idx="${i}"></div>`;
     }
@@ -698,11 +700,15 @@ function bindGrid() {
 
       dragData = { idx, level, count: state.gridCounts[idx] || 1 };
 
+      const dumbbellImgs = ['','🏋️','🏋️‍♂️','🏋️‍♀️','💪','🔥','⚡','🌟','💎','👑','🌀'];
       clone = document.createElement('div');
       clone.className = 'drag-clone';
-      const colors = ['#8B8B8B','#2ECC71','#3498DB','#9B59B6','#F1C40F'];
-      clone.style.background = colors[level-1] || '#aaa';
-      clone.textContent = level;
+      const colors = ['#2d2d3d','#3a5a3a','#3a4a6a','#6a3a7a','#8a7a2a','#9a4a5a','#3a7a7a','#4a6a8a','#8a7a4a','#5a3a8a'];
+      const c = colors[level-1] || '#2d2d3d';
+      const icon = dumbbellImgs[level] || '🏋️';
+      clone.style.background = c;
+      clone.style.borderColor = c;
+      clone.innerHTML = `<span style="font-size:24px">${icon}</span><span style="font-size:10px;position:absolute;bottom:2px;right:5px;opacity:.8">${level}</span>`;
       clone.style.left = (e.clientX - 30) + 'px';
       clone.style.top = (e.clientY - 30) + 'px';
       document.body.appendChild(clone);
