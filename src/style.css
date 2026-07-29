@@ -1227,3 +1227,4 @@ img{-webkit-user-drag:none;user-select:none}
   box-shadow:0 4px #3a1d8a;
 }
 .tutorial-btn:active{transform:scale(.96);box-shadow:0 2px #3a1d8a}
+.tutorial-counter{text-align:center;font-size:16px;color:#ffd34e;font-weight:700;margin-bottom:8px;display:none}

@@ -46,7 +46,7 @@ const MARKET_LOTS = [
 
 const state = {
   tab: 'gorillas',
-  bananas: 50,
+  bananas: 200,
   gems: 0,
   grid: [0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,1,1,1,0,0, 0,0,1,1,1,0,0, 0,0,1,1,1,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0],
   queue: [1,1,1],
@@ -987,14 +987,28 @@ async function loadStateFromFirebase(userId) {
     if (data) {
       if (data.bananas !== undefined) state.bananas = data.bananas;
       if (data.gems !== undefined) state.gems = data.gems;
-      if (data.grid) state.grid = data.grid;
-      if (data.queue) state.queue = data.queue;
+      if (data.tutorialDone) state.tutorialDone = data.tutorialDone;
+
+      // Если сохранённая сетка не совпадает с текущей — сбрасываем (миграция с новой раскладкой)
+      if (data.grid && data.grid.length === 49) {
+        // Проверяем что сетка совместима с новой раскладкой (9 открытых клеток по центру)
+        // Если в старой сетке были данные в новых заблокированных позициях — пересоздаём
+        const open = [16,17,18,23,24,25,30,31,32];
+        let conflict = false;
+        for (let i = 0; i < 49; i++) {
+          if (!open.includes(i) && data.grid[i] > 0) { conflict = true; break; }
+        }
+        if (!conflict) state.grid = data.grid;
+        // Если конфликт — оставляем дефолтную сетку с гантелями в центре
+      }
+      // Если очередь невалидна — сбрасываем
+      if (data.queue && data.queue.length <= 5) state.queue = data.queue;
+
       if (data.gorillas) state.gorillas = data.gorillas;
       if (data.totalTaps !== undefined) state.totalTaps = data.totalTaps;
       if (data.totalTrainingSends !== undefined) state.totalTrainingSends = data.totalTrainingSends;
       if (data.totalBananasEarned !== undefined) state.totalBananasEarned = data.totalBananasEarned;
       if (data.quests) state.quests = data.quests;
-      if (data.lockedCells) state.lockedCells = data.lockedCells;
     }
   } catch (e) {
     console.warn('Failed to load from Firebase:', e);
@@ -1023,48 +1037,76 @@ const TUTORIAL_STEPS = [
   {
     target: '#gorilla-tap-area',
     title: '👋 Привет! Это Бруно',
-    text: 'Тапай по горилле, чтобы кормить её бананами. Чем больше кормишь — тем сильнее она становится!',
-    side: 'bottom'
+    text: 'Тапай по горилле, чтобы кормить её бананами. Сделай 3 тапа чтобы продолжить!',
+    side: 'bottom',
+    auto: true
   },
   {
     target: '#bananas',
     title: '🍌 Бананы',
-    text: 'Твой счёт бананов. Бананы нужны чтобы кормить гориллу и открывать клетки.',
-    side: 'top'
+    text: 'Твой счёт бананов. Они нужны чтобы кормить гориллу и открывать клетки.',
+    side: 'bottom'
   },
   {
     target: '.bottom-nav button[data-tab="inventory"]',
-    title: '🏋️ Инвентарь',
-    text: 'Здесь клетки с гантелями. Перетаскивай одинаковые гантели друг на друга — они сольются в более сильную!',
+    title: '🏋️ Гантели',
+    text: 'Здесь клетки с гантелями. 🔒 закрытые клетки можно купить за бананы. Перетаскивай одинаковые гантели друг на друга для слияния!',
     side: 'top'
   },
   {
     target: '.bottom-nav button[data-tab="market"]',
-    title: '🐒 Магазин',
-    text: 'Здесь можно купить новых горилл разной редкости. У каждой свои способности!',
+    title: '🐒 Магазин горилл',
+    text: 'Покупай новых горилл разной редкости. У каждой свои способности и доход!',
     side: 'top'
   },
   {
-    target: '[data-tab="gorillas"]',
+    target: '#gorilla-tap-area',
     title: '🎯 Тренировка',
-    text: 'Отправляй гориллу на тренировку — она будет приносить гантели. Жми кнопку "Тренировать"!',
+    text: 'Когда накормишь гориллу до 100% — жми "Тренировать". Она будет приносить гантели!',
     side: 'bottom'
   }
 ];
 
+let tutorialTapCount = 0;
+
 function startTutorial() {
   state.tutorialDone = true;
   let step = 0;
+  tutorialTapCount = 0;
+
+  // Слушаем тапы по горилле для авто-шага
+  function onTutorialTap(e) {
+    if (step !== 0) return;
+    tutorialTapCount++;
+    if (tutorialTapCount >= 3) {
+      tutorialTapCount = 0;
+      step++;
+      showStep();
+    }
+  }
+  document.addEventListener('pointerdown', onTutorialTap, { once: false });
 
   function showStep() {
     const s = TUTORIAL_STEPS[step];
-    if (!s) { document.getElementById('tutorial-overlay')?.remove(); return; }
+    if (!s) {
+      document.getElementById('tutorial-overlay')?.remove();
+      document.removeEventListener('pointerdown', onTutorialTap);
+      return;
+    }
+
+    // Авто-переключение вкладок
+    if (step === 2) { state.tab = 'inventory'; render(); }
+    if (step === 3) { state.tab = 'market'; render(); }
+    if (step === 1 || step === 4) { state.tab = 'gorillas'; render(); }
 
     const target = document.querySelector(s.target);
-    if (!target) { step++; showStep(); return; }
+    if (!target) {
+      // Если элемент не найден, всё равно показываем карточку по центру
+      showCardAtCenter(s);
+      return;
+    }
     const rect = target.getBoundingClientRect();
 
-    // Создаём/обновляем оверлей
     let overlay = document.getElementById('tutorial-overlay');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -1076,6 +1118,7 @@ function startTutorial() {
           <div class="tutorial-gorilla">🦍👉</div>
           <div class="tutorial-title"></div>
           <div class="tutorial-text"></div>
+          <div class="tutorial-counter"></div>
           <div class="tutorial-dots"></div>
           <button class="tutorial-btn">Далее</button>
         </div>`;
@@ -1083,35 +1126,96 @@ function startTutorial() {
     }
 
     const highlight = overlay.querySelector('.tutorial-highlight');
-    highlight.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;`;
+    highlight.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${Math.max(rect.width,10)}px;height:${Math.max(rect.height,10)}px;display:block;`;
 
     overlay.querySelector('.tutorial-title').textContent = s.title;
     overlay.querySelector('.tutorial-text').textContent = s.text;
 
-    // dots
+    // Счётчик тапов для авто-шага
+    const counter = overlay.querySelector('.tutorial-counter');
+    if (s.auto) {
+      counter.textContent = `Тапов: ${tutorialTapCount}/3 🍌`;
+      counter.style.display = 'block';
+    } else {
+      counter.style.display = 'none';
+    }
+
     const dots = overlay.querySelector('.tutorial-dots');
     dots.innerHTML = TUTORIAL_STEPS.map((_, i) =>
       `<span class="tutorial-dot${i === step ? ' active' : ''}"></span>`
     ).join('');
 
     const btn = overlay.querySelector('.tutorial-btn');
-    btn.textContent = step === TUTORIAL_STEPS.length - 1 ? '❌ Закрыть' : '👉 Далее';
-    btn.onclick = () => { step++; showStep(); };
+    if (s.auto) {
+      btn.style.display = 'none';
+    } else {
+      btn.style.display = 'block';
+      btn.textContent = step === TUTORIAL_STEPS.length - 1 ? '❌ Готово!' : '👉 Далее';
+      btn.onclick = () => { step++; showStep(); };
+    }
 
     // Позиционируем карточку
+    positionCard(overlay, rect, s.side);
+  }
+
+  function showCardAtCenter(s) {
+    let overlay = document.getElementById('tutorial-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'tutorial-overlay';
+      overlay.innerHTML = `
+        <div class="tutorial-backdrop"></div>
+        <div class="tutorial-highlight" style="display:none"></div>
+        <div class="tutorial-card">
+          <div class="tutorial-gorilla">🦍👉</div>
+          <div class="tutorial-title"></div>
+          <div class="tutorial-text"></div>
+          <div class="tutorial-dots"></div>
+          <button class="tutorial-btn">Далее</button>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+    overlay.querySelector('.tutorial-highlight').style.display = 'none';
+    overlay.querySelector('.tutorial-title').textContent = s.title;
+    overlay.querySelector('.tutorial-text').textContent = s.text;
+    const dots = overlay.querySelector('.tutorial-dots');
+    dots.innerHTML = TUTORIAL_STEPS.map((_, i) =>
+      `<span class="tutorial-dot${i === step ? ' active' : ''}"></span>`
+    ).join('');
+    const btn = overlay.querySelector('.tutorial-btn');
+    btn.style.display = 'block';
+    btn.textContent = '👉 Далее';
+    btn.onclick = () => { step++; showStep(); };
+    const card = overlay.querySelector('.tutorial-card');
+    card.style.left = '50%';
+    card.style.top = '50%';
+    card.style.transform = 'translate(-50%,-50%)';
+  }
+
+  function positionCard(overlay, rect, side) {
     const card = overlay.querySelector('.tutorial-card');
     card.style.left = '';
     card.style.right = '';
     card.style.top = '';
     card.style.bottom = '';
-    if (s.side === 'bottom') {
-      card.style.top = (rect.bottom + 12) + 'px';
-      card.style.left = Math.max(8, Math.min(rect.left + rect.width/2 - 140, window.innerWidth - 300)) + 'px';
+    card.style.transform = '';
+
+    const cw = 280;
+    let left, top;
+
+    if (side === 'bottom') {
+      top = Math.min(rect.bottom + 12, window.innerHeight - 220);
+      left = Math.max(8, Math.min(rect.left + rect.width/2 - cw/2, window.innerWidth - cw - 8));
+      if (top + 220 > window.innerHeight) { top = rect.top - 210; }
     } else {
-      card.style.top = (rect.top - 180) + 'px';
-      if (rect.top < 200) card.style.top = (rect.bottom + 12) + 'px';
-      card.style.left = Math.max(8, Math.min(rect.left + rect.width/2 - 140, window.innerWidth - 300)) + 'px';
+      top = rect.top - 210;
+      if (top < 10) { top = Math.min(rect.bottom + 12, window.innerHeight - 220); }
+      left = Math.max(8, Math.min(rect.left + rect.width/2 - cw/2, window.innerWidth - cw - 8));
+      if (top < 10) top = 10;
     }
+
+    card.style.left = left + 'px';
+    card.style.top = Math.max(10, top) + 'px';
   }
 
   showStep();
