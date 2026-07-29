@@ -1133,3 +1133,57 @@ img{-webkit-user-drag:none;user-select:none}
   transition:all .15s;
 }
 .btn-collect-training:active{transform:scale(.96)}
+
+/* ── LARGER DUMBBELLS ── */
+.dumbbell{width:95%;height:95%;object-fit:contain;filter:drop-shadow(0 2px 6px #0008);pointer-events:none}
+
+/* ── BANANA CELLS (cells with items) ── */
+.cell:not(.locked):not(.empty){background:linear-gradient(145deg,#2a2020,#1a1510);border-color:#5a4a20}
+.cell:not(.locked):not(.empty) .level-badge{background:#3a2a10cc;color:#ffd34e;font-size:9px}
+
+/* ── MERGE HINT: outline only, NO GLOW ── */
+.cell.merge-hint{outline:2px dashed #ffd34e;outline-offset:-2px;animation:none}
+.cell.merged{animation:cell-merge .4s ease}
+@keyframes cell-merge{
+  0%{transform:scale(1)}
+  35%{transform:scale(1.2);box-shadow:0 0 25px #ffd34e88}
+  100%{transform:scale(1);box-shadow:none}
+}
+
+/* ── SELL BUTTON & COUNTER ── */
+.detail-buttons{display:flex;gap:8px;margin-top:14px}
+.btn-sell{
+  flex:1;
+  padding:13px;
+  border-radius:12px;
+  background:linear-gradient(180deg,#f97316,#ea580c);
+  color:#fff;
+  font-weight:900;
+  font-size:14px;
+  transition:all .15s;
+}
+.btn-sell:active{transform:scale(.95)}
+.detail-sell{font-size:12px;color:#f97316;font-weight:700;margin-top:2px}
+
+.banana-sell-counter{
+  position:fixed;
+  z-index:40;
+  font-size:28px;
+  font-weight:900;
+  color:var(--gold);
+  text-shadow:0 2px 8px #000a;
+  pointer-events:none;
+  transition:all .2s;
+  opacity:0;
+  transform:scale(.5);
+}
+.banana-sell-counter.flying{
+  opacity:1;
+  transform:scale(1.2);
+  animation:counter-fly 1.2s ease-out forwards;
+}
+@keyframes counter-fly{
+  0%{opacity:1;transform:scale(1.2) translate(0,0)}
+  30%{opacity:1;transform:scale(1.5) translate(0,-20px)}
+  100%{opacity:0;transform:scale(.6) translate(0,-180px)}
+}

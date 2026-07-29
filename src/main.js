@@ -66,8 +66,21 @@ const state = {
   userId: '',
   walletConnected: false,
   walletAddr: '',
-  tutorialDone: false
+  tutorialDone: false,
+  lockedCells: []
 };
+
+// Generate random 25 locked cells (out of 49)
+function generateLockedCells() {
+  const all = Array.from({length: 49}, (_, i) => i);
+  const locked = [];
+  const toLock = 25;
+  for (let i = 0; i < toLock; i++) {
+    const idx = Math.floor(Math.random() * all.length);
+    locked.push(all.splice(idx, 1)[0]);
+  }
+  state.lockedCells = locked;
+}
 
 const $ = s => document.querySelector(s);
 const image = l => ASSET + 'dumbbell-' + String(l).padStart(2,'0') + '.png';
@@ -123,7 +136,7 @@ function gorillas() {
           <div class="gorilla-level-badge">LVL ${g.level}</div>
         </div>
         <div class="gorilla-tap-img-wrap">
-          <img src="${getGorillaImg(g.rarity)}" class="gorilla-tap-img" id="gorilla-img" draggable="false" />`;
+          <img src="${inTraining ? ASSET + 'gorilla-03.png' : getGorillaImg(g.rarity)}" class="gorilla-tap-img" id="gorilla-img" draggable="false" />`;
 
   if (inTraining) {
     content += `<div class="training-overlay"><div class="training-icon">🏋️</div><div class="training-timer">${formatTime(trainingLeft)}</div><div class="training-label">Тренировка</div></div>`;
@@ -174,11 +187,10 @@ function gorillas() {
 }
 
 function inventory() {
-  const lockedCells = [6,13,20,27,34,41,42,43,44,45,46,47,48];
   let gridHtml = '';
   for(let i=0;i<49;i++) {
     const lv=state.grid[i]||0;
-    const locked=lockedCells.includes(i);
+    const locked=isLocked(i);
     if(locked) gridHtml+=`<div class="cell locked" data-idx="${i}"></div>`;
     else gridHtml+=`<div class="cell" data-idx="${i}">${lv?`<span class="level-badge">${lv}</span>${item(lv)}`:''}</div>`;
   }
@@ -405,7 +417,7 @@ function collectTraining() {
 }
 
 function isLocked(idx) {
-  return [6,13,20,27,34,41,42,43,44,45,46,47,48].includes(idx);
+  return state.lockedCells.includes(idx);
 }
 
 function buyGorilla(gid) {
@@ -528,7 +540,7 @@ function bindGrid() {
       const moved = Math.abs(dx) + Math.abs(dy);
 
       if (dragIdx === targetIdx && moved < 10) {
-        showDumbbellDetail(state.grid[dragIdx]);
+        showDumbbellDetail(state.grid[dragIdx], dragIdx);
         dragIdx = null;
         removeDragClone();
         clearHighlights();
@@ -574,8 +586,7 @@ function bindGrid() {
 }
 
 function tryMerge(a, b) {
-  const lockedCells = [6,13,20,27,34,41,42,43,44,45,46,47,48];
-  if (lockedCells.includes(b)) return;
+  if (isLocked(b)) return;
   const lvA = state.grid[a];
   const lvB = state.grid[b];
   if (lvA === 0 || lvB === 0) return;
@@ -595,13 +606,21 @@ function tryMerge(a, b) {
 
   updateQuestProgress('bananas');
   render();
+
+  // Flash animation on merged cell
+  setTimeout(() => {
+    const mergedCell = document.querySelector(`#merge-grid .cell[data-idx="${b}"]`);
+    if (mergedCell) {
+      mergedCell.classList.add('merged');
+      setTimeout(() => mergedCell.classList.remove('merged'), 400);
+    }
+  }, 50);
 }
 
 function placeFromQueue(qidx) {
-  const lockedCells = [6,13,20,27,34,41,42,43,44,45,46,47,48];
   let emptyIdx = -1;
   for (let i = 0; i < 49; i++) {
-    if (state.grid[i] === 0 && !lockedCells.includes(i)) { emptyIdx = i; break; }
+    if (state.grid[i] === 0 && !isLocked(i)) { emptyIdx = i; break; }
   }
   if (emptyIdx === -1) { toast('Сетка заполнена!'); return; }
   state.grid[emptyIdx] = state.queue[qidx];
@@ -720,11 +739,12 @@ function showBottomSheet(content) {
   }
 }
 
-function showDumbbellDetail(level) {
+function showDumbbellDetail(level, idx) {
   const nextLevel = level < 10 ? level + 1 : null;
   const name = DUMBBELL_NAMES[level] || `Уровень ${level}`;
   const nextName = nextLevel ? DUMBBELL_NAMES[nextLevel] : null;
   const earn = level * 5;
+  const sellPrice = level * 10;
 
   let pathHtml = '';
   let lv = level;
@@ -741,6 +761,7 @@ function showDumbbellDetail(level) {
         <div class="detail-name">${name}</div>
         <div class="detail-level">Уровень ${level}</div>
         <div class="detail-earn">+${earn} 🍌 за слияние</div>
+        <div class="detail-sell">💰 ${sellPrice} 🍌 за продажу</div>
       </div>
     </div>
     ${nextLevel ? `
@@ -755,8 +776,56 @@ function showDumbbellDetail(level) {
         <div class="detail-note">Это самая сильная гантель! Держи её гордо 💪</div>
       </div>
     `}
-    <button class="btn-sheet-close" id="sheet-close">ЗАКРЫТЬ</button>
+    <div class="detail-buttons">
+      <button class="btn-sell" id="btn-sell-dumbbell" data-idx="${idx !== undefined ? idx : ''}" data-level="${level}">ПРОДАТЬ за ${sellPrice} 🍌</button>
+      <button class="btn-sheet-close" id="sheet-close">ЗАКРЫТЬ</button>
+    </div>
   `);
+
+  const sellBtn = document.getElementById('btn-sell-dumbbell');
+  if (sellBtn) {
+    sellBtn.addEventListener('click', () => {
+      const i = parseInt(sellBtn.dataset.idx);
+      const lv = parseInt(sellBtn.dataset.level);
+      if (!isNaN(i) && state.grid[i] === lv) {
+        sellDumbbell(i, lv);
+      }
+    });
+  }
+}
+
+function sellDumbbell(idx, level) {
+  if (state.grid[idx] !== level) return;
+  const price = level * 10;
+
+  state.grid[idx] = 0;
+  state.bananas += price;
+  state.totalBananasEarned += price;
+
+  const overlay = document.getElementById('sheet-overlay');
+  if (overlay) overlay.remove();
+
+  showBananaCounter(price);
+
+  haptic('collect');
+  toast(`+${price} 🍌`);
+  updateQuestProgress('bananas');
+  render();
+}
+
+function showBananaCounter(amount) {
+  const counter = document.createElement('div');
+  counter.className = 'banana-sell-counter';
+  counter.textContent = `+${amount} 🍌`;
+  counter.style.left = (window.innerWidth / 2 - 70) + 'px';
+  counter.style.top = (window.innerHeight / 2 - 20) + 'px';
+  document.body.appendChild(counter);
+
+  requestAnimationFrame(() => {
+    counter.classList.add('flying');
+  });
+
+  setTimeout(() => counter.remove(), 1400);
 }
 
 function showGorillaDetail(shopItem) {
@@ -863,7 +932,7 @@ document.addEventListener('pointerdown', e => {
 function getSerializableState() {
   return { bananas: state.bananas, gems: state.gems, grid: state.grid, queue: state.queue,
     gorillas: state.gorillas, totalTaps: state.totalTaps, totalTrainingSends: state.totalTrainingSends,
-    totalBananasEarned: state.totalBananasEarned, quests: state.quests };
+    totalBananasEarned: state.totalBananasEarned, quests: state.quests, lockedCells: state.lockedCells };
 }
 
 async function loadStateFromFirebase(userId) {
@@ -879,6 +948,7 @@ async function loadStateFromFirebase(userId) {
       if (data.totalTrainingSends !== undefined) state.totalTrainingSends = data.totalTrainingSends;
       if (data.totalBananasEarned !== undefined) state.totalBananasEarned = data.totalBananasEarned;
       if (data.quests) state.quests = data.quests;
+      if (data.lockedCells) state.lockedCells = data.lockedCells;
     }
   } catch (e) {
     console.warn('Failed to load from Firebase:', e);
@@ -887,6 +957,7 @@ async function loadStateFromFirebase(userId) {
 
 async function init() {
   state.userId = getOrCreateUserId();
+  if (state.lockedCells.length === 0) generateLockedCells();
   initWallet();
   setStatusChangeHandler(addr => { state.walletConnected = !!addr; state.walletAddr = addr||''; if(state.tab==='market') render(); });
   await loadStateFromFirebase(state.userId);
