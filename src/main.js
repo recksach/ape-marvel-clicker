@@ -48,8 +48,8 @@ const state = {
   tab: 'gorillas',
   bananas: 50,
   gems: 0,
-  grid: [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  queue: [1],
+  grid: [0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,1,1,1,0,0, 0,0,1,1,1,0,0, 0,0,1,1,1,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0],
+  queue: [1,1,1],
   gorillas: [
     { id: 'g0', name: 'БРУНО', rarity: 0, level: 1, feed: 0, tapCount: 0, trainingEnd: 0, earnedDumbbells: 0, equipped: null }
   ],
@@ -70,9 +70,13 @@ const state = {
   lockedCells: []
 };
 
-// Generate random 25 locked cells (out of 49)
+// Generate locked cells — only center 3×3 open
 function generateLockedCells() {
-  const locked = [6,7,13,14,20,21,27,28,34,35,41,42];
+  const open = [16,17,18,23,24,25,30,31,32];
+  const locked = [];
+  for (let i = 0; i < 49; i++) {
+    if (!open.includes(i)) locked.push(i);
+  }
   state.lockedCells = locked;
 }
 
@@ -185,7 +189,7 @@ function inventory() {
   for(let i=0;i<49;i++) {
     const lv=state.grid[i]||0;
     const locked=isLocked(i);
-    if(locked) gridHtml+=`<div class="cell locked" data-idx="${i}"></div>`;
+    if(locked) gridHtml+=`<div class="cell locked" data-idx="${i}"><span class="locked-buy">🔒 ${(i+1)*5}🍌</span></div>`;
     else gridHtml+=`<div class="cell" data-idx="${i}">${lv?`<span class="level-badge">${lv}</span>${item(lv)}`:''}</div>`;
   }
   let queueHtml=state.queue.map((lv,i)=>`<div class="q-item" data-qidx="${i}">${item(lv)}<span class="q-timer">${i===0?'Готово':'02:'+String(27+i*3).padStart(2,'0')}</span></div>`).join('');
@@ -269,19 +273,26 @@ function clan() {
 }
 
 function createBananaParticle(e) {
-  const p = document.createElement('div');
-  p.className = 'banana-particle';
-  p.textContent = '🍌';
-  const x = e?.clientX || window.innerWidth/2;
-  const y = e?.clientY || window.innerHeight/2;
-  p.style.left = (x-10)+'px';
-  p.style.top = (y-10)+'px';
-  const dx = (Math.random()-0.5)*200;
-  const dy = -150 - Math.random()*100;
-  p.style.setProperty('--dx', dx+'px');
-  p.style.setProperty('--dy', dy+'px');
-  document.body.appendChild(p);
-  setTimeout(() => p.remove(), 800);
+  const gorillaImg = document.getElementById('gorilla-img');
+  if (!gorillaImg) return;
+  const gr = gorillaImg.getBoundingClientRect();
+  const cx = gr.left + gr.width / 2;
+  const cy = gr.top + gr.height / 2;
+  for (let i = 0; i < 5; i++) {
+    const p = document.createElement('div');
+    p.className = 'banana-particle';
+    p.textContent = '🍌';
+    const x = e?.clientX || window.innerWidth/2;
+    const y = e?.clientY || window.innerHeight/2;
+    p.style.left = (x - 10 + (Math.random() - 0.5) * 40) + 'px';
+    p.style.top = (y - 10 + (Math.random() - 0.5) * 40) + 'px';
+    const dx = cx - x + (Math.random() - 0.5) * 60;
+    const dy = cy - y + (Math.random() - 0.5) * 60;
+    p.style.setProperty('--dx', dx + 'px');
+    p.style.setProperty('--dy', dy + 'px');
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 600);
+  }
 }
 
 function tapGorilla(e) {
@@ -300,7 +311,7 @@ function tapGorilla(e) {
   state.totalBananasEarned += cost;
 
   const img = document.getElementById('gorilla-img');
-  if (img) { img.style.transform='scale(.88)'; setTimeout(()=>img.style.transform='scale(1)',150); }
+  if (img) { img.style.transform='scale(1.12)'; setTimeout(()=>img.style.transform='scale(1)',150); }
 
   createBananaParticle(e);
   haptic('tap');
@@ -457,6 +468,20 @@ function bindGorillaScreen() {
 
 function bindGrid() {
   const cells = document.querySelectorAll('#merge-grid .cell:not(.locked)');
+  // Buy locked cells
+  document.querySelectorAll('#merge-grid .cell.locked').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const idx = parseInt(cell.dataset.idx);
+      const price = (idx + 1) * 5;
+      if (state.bananas < price) { toast(`Нужно ${price} 🍌 чтобы открыть!`); return; }
+      state.bananas -= price;
+      state.lockedCells = state.lockedCells.filter(l => l !== idx);
+      haptic('collect');
+      toast(`Ячейка открыта! -${price} 🍌`);
+      sync();
+      render();
+    });
+  });
   let dragIdx = null;
   let dragClone = null;
   let dragStart = null;
@@ -808,6 +833,33 @@ function sellDumbbell(idx, level) {
 }
 
 function showBananaCounter(amount) {
+  const wallet = document.getElementById('bananas');
+  if (!wallet) { const counter = document.createElement('div');
+  counter.className = 'banana-sell-counter';
+  counter.textContent = `+${amount} 🍌`;
+  counter.style.left = (window.innerWidth / 2 - 70) + 'px';
+  counter.style.top = (window.innerHeight / 2 - 20) + 'px';
+  document.body.appendChild(counter);
+
+  requestAnimationFrame(() => {
+    counter.classList.add('flying');
+  });
+
+  setTimeout(() => counter.remove(), 1400); return; }
+  const wr = wallet.getBoundingClientRect();
+  for (let i = 0; i < 3; i++) {
+    const p = document.createElement('div');
+    p.className = 'banana-particle';
+    p.textContent = '🍌';
+    p.style.left = (window.innerWidth / 2 - 10 + (Math.random() - 0.5) * 80) + 'px';
+    p.style.top = (window.innerHeight / 2 - 10 + (Math.random() - 0.5) * 60) + 'px';
+    const dx = wr.left - parseFloat(p.style.left) + (Math.random() - 0.5) * 20;
+    const dy = wr.top - parseFloat(p.style.top) + (Math.random() - 0.5) * 20;
+    p.style.setProperty('--dx', dx + 'px');
+    p.style.setProperty('--dy', dy + 'px');
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  }
   const counter = document.createElement('div');
   counter.className = 'banana-sell-counter';
   counter.textContent = `+${amount} 🍌`;
@@ -926,7 +978,7 @@ document.addEventListener('pointerdown', e => {
 function getSerializableState() {
   return { bananas: state.bananas, gems: state.gems, grid: state.grid, queue: state.queue,
     gorillas: state.gorillas, totalTaps: state.totalTaps, totalTrainingSends: state.totalTrainingSends,
-    totalBananasEarned: state.totalBananasEarned, quests: state.quests, lockedCells: state.lockedCells };
+    totalBananasEarned: state.totalBananasEarned, quests: state.quests, lockedCells: state.lockedCells, tutorialDone: state.tutorialDone };
 }
 
 async function loadStateFromFirebase(userId) {
@@ -956,6 +1008,7 @@ async function init() {
   setStatusChangeHandler(addr => { state.walletConnected = !!addr; state.walletAddr = addr||''; if(state.tab==='market') render(); });
   await loadStateFromFirebase(state.userId);
   render();
+  if (!state.tutorialDone) setTimeout(startTutorial, 500);
   setInterval(() => saveUserData(state.userId, getSerializableState()), 30000);
   setInterval(() => {
     let changed = false;
@@ -963,6 +1016,105 @@ async function init() {
     MARKET_LOTS.forEach(lot => { if(lot.timer > 0) { lot.timer--; changed = true; } });
     if(changed && (state.tab==='gorillas' || state.tab==='market')) render();
   }, 1000);
+}
+
+// ── TUTORIAL ──
+const TUTORIAL_STEPS = [
+  {
+    target: '#gorilla-tap-area',
+    title: '👋 Привет! Это Бруно',
+    text: 'Тапай по горилле, чтобы кормить её бананами. Чем больше кормишь — тем сильнее она становится!',
+    side: 'bottom'
+  },
+  {
+    target: '#bananas',
+    title: '🍌 Бананы',
+    text: 'Твой счёт бананов. Бананы нужны чтобы кормить гориллу и открывать клетки.',
+    side: 'top'
+  },
+  {
+    target: '.bottom-nav button[data-tab="inventory"]',
+    title: '🏋️ Инвентарь',
+    text: 'Здесь клетки с гантелями. Перетаскивай одинаковые гантели друг на друга — они сольются в более сильную!',
+    side: 'top'
+  },
+  {
+    target: '.bottom-nav button[data-tab="market"]',
+    title: '🐒 Магазин',
+    text: 'Здесь можно купить новых горилл разной редкости. У каждой свои способности!',
+    side: 'top'
+  },
+  {
+    target: '[data-tab="gorillas"]',
+    title: '🎯 Тренировка',
+    text: 'Отправляй гориллу на тренировку — она будет приносить гантели. Жми кнопку "Тренировать"!',
+    side: 'bottom'
+  }
+];
+
+function startTutorial() {
+  state.tutorialDone = true;
+  let step = 0;
+
+  function showStep() {
+    const s = TUTORIAL_STEPS[step];
+    if (!s) { document.getElementById('tutorial-overlay')?.remove(); return; }
+
+    const target = document.querySelector(s.target);
+    if (!target) { step++; showStep(); return; }
+    const rect = target.getBoundingClientRect();
+
+    // Создаём/обновляем оверлей
+    let overlay = document.getElementById('tutorial-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'tutorial-overlay';
+      overlay.innerHTML = `
+        <div class="tutorial-backdrop" onclick="event.stopPropagation()"></div>
+        <div class="tutorial-highlight"></div>
+        <div class="tutorial-card">
+          <div class="tutorial-gorilla">🦍👉</div>
+          <div class="tutorial-title"></div>
+          <div class="tutorial-text"></div>
+          <div class="tutorial-dots"></div>
+          <button class="tutorial-btn">Далее</button>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    const highlight = overlay.querySelector('.tutorial-highlight');
+    highlight.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;`;
+
+    overlay.querySelector('.tutorial-title').textContent = s.title;
+    overlay.querySelector('.tutorial-text').textContent = s.text;
+
+    // dots
+    const dots = overlay.querySelector('.tutorial-dots');
+    dots.innerHTML = TUTORIAL_STEPS.map((_, i) =>
+      `<span class="tutorial-dot${i === step ? ' active' : ''}"></span>`
+    ).join('');
+
+    const btn = overlay.querySelector('.tutorial-btn');
+    btn.textContent = step === TUTORIAL_STEPS.length - 1 ? '❌ Закрыть' : '👉 Далее';
+    btn.onclick = () => { step++; showStep(); };
+
+    // Позиционируем карточку
+    const card = overlay.querySelector('.tutorial-card');
+    card.style.left = '';
+    card.style.right = '';
+    card.style.top = '';
+    card.style.bottom = '';
+    if (s.side === 'bottom') {
+      card.style.top = (rect.bottom + 12) + 'px';
+      card.style.left = Math.max(8, Math.min(rect.left + rect.width/2 - 140, window.innerWidth - 300)) + 'px';
+    } else {
+      card.style.top = (rect.top - 180) + 'px';
+      if (rect.top < 200) card.style.top = (rect.bottom + 12) + 'px';
+      card.style.left = Math.max(8, Math.min(rect.left + rect.width/2 - 140, window.innerWidth - 300)) + 'px';
+    }
+  }
+
+  showStep();
 }
 
 init();
