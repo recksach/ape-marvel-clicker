@@ -9,8 +9,7 @@
     "server": "node server.cjs"
   },
   "dependencies": {
-    "@tonconnect/ui": "^2.0.0",
-    "firebase": "^12.16.0"
+    "@tonconnect/ui": "^2.0.0"
   },
   "devDependencies": {
     "vite": "^6.0.0"

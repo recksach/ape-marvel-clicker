@@ -5,14 +5,17 @@ const ctx = canvas.getContext('2d');
 let animFrame = null;
 let particles = [];
 let floatTexts = [];
-let npcBob = {};
 let lastTime = 0;
+let masonBob = 0;
+let masonScale = 1;
+let onTapCallback = null;
 
-export function initGameCanvas(container) {
+export function initGameCanvas(container, onTap) {
+  onTapCallback = onTap;
   container.appendChild(canvas);
   resize();
   window.addEventListener('resize', resize);
-  setupClickHandler(container);
+  setupClickHandler();
   startLoop();
 }
 
@@ -30,221 +33,199 @@ export function resize() {
   canvas.style.pointerEvents = 'auto';
 }
 
-function setupClickHandler(container) {
+function setupClickHandler() {
   canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    // Check NPC hit
-    const s = store.state;
-    for (const npc of s.activeNPCs) {
-      if (!s.unlockedNPCs.includes(npc.id)) continue;
-      const cx = npc.x / 100 * canvas.width;
-      const cy = npc.y / 100 * canvas.height;
-      const r = 40 * npc.scale;
-      if (Math.abs(x - cx) < r && Math.abs(y - cy) < r) {
-        const result = store.tapNPC(npc.id);
-        if (result) {
-          spawnParticles(cx, cy, result.gold);
-          spawnFloatText(cx, cy - 30, `+${result.gold} ●`, '#f7c948');
-          if (typeof window._onNPCTap === 'function') window._onNPCTap(npc.id, result);
-        }
-        return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height * 0.42;
+    const r = 90 * masonScale;
+    const dx = x - cx;
+    const dy = y - cy;
+    if (dx * dx + dy * dy < r * r) {
+      const result = store.tapMason();
+      if (result) {
+        spawnParticles(cx, cy - 40, result.gold);
+        spawnFloatText(cx + (Math.random() - 0.5) * 40, cy - 60, `+${result.gold}`, '#f7c948');
+        spawnFloatText(cx + (Math.random() - 0.5) * 30, cy - 80, `+${result.xp} XP`, '#10b981');
+        if (onTapCallback) onTapCallback(result);
       }
     }
-    // Tap on empty space - small gold
-    const s2 = store.state;
-    s2.gold += 1;
-    store.addXP(1);
-    store.save();
-    spawnParticles(x, y, 1);
-    spawnFloatText(x, y - 20, '+1 ●', '#8b7355');
   });
 }
 
-/* ─── Particles ─── */
 function spawnParticles(x, y, amount) {
-  const count = Math.min(12, Math.floor(amount / 2) + 3);
+  const count = Math.min(15, Math.floor(amount / 2) + 4);
   for (let i = 0; i < count; i++) {
     particles.push({
       x, y,
-      vx: (Math.random() - 0.5) * 4,
-      vy: -Math.random() * 5 - 2,
+      vx: (Math.random() - 0.5) * 5,
+      vy: -Math.random() * 6 - 2,
       life: 1,
-      decay: 0.015 + Math.random() * 0.02,
-      size: 3 + Math.random() * 4,
-      color: ['#f7c948', '#10b981', '#e0dcc0', '#8b7355'][Math.floor(Math.random() * 4)],
+      decay: 0.012 + Math.random() * 0.018,
+      size: 3 + Math.random() * 5,
+      color: ['#f7c948', '#10b981', '#e0dcc0', '#ffd700'][Math.floor(Math.random() * 4)],
     });
   }
 }
 
 function spawnFloatText(x, y, text, color) {
-  floatTexts.push({ x, y, text, color, life: 1, vy: -1.5 });
+  floatTexts.push({ x, y, text, color, life: 1, vy: -2 });
 }
 
-/* ─── NPC rendering ─── */
-function drawNPC(npc, time) {
+function drawBackground(time) {
   const w = canvas.width;
   const h = canvas.height;
-  const cx = npc.x / 100 * w;
-  const cy = npc.y / 100 * h;
-  const s = npc.scale;
-  const bob = Math.sin(time * 0.002 + npc.id.charCodeAt(0)) * 4;
-  const rarityColors = ['#8b7355', '#10b981', '#3b82f6', '#a855f7', '#f7c948', '#ef4444'];
-  const colorIdx = Math.floor(Math.abs(Math.sin(npc.id.charCodeAt(0))) * rarityColors.length);
-  const mainColor = rarityColors[colorIdx % rarityColors.length];
+  const bg = ctx.createRadialGradient(w * 0.5, h * 0.35, 0, w * 0.5, h * 0.35, w * 0.8);
+  bg.addColorStop(0, '#1a3a1a');
+  bg.addColorStop(0.4, '#0d1f0d');
+  bg.addColorStop(1, '#050a05');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = '#10b98106';
+  for (let i = 0; i < 40; i++) {
+    const sx = (i * 137.5 + i * i * 7.3) % w;
+    const sy = (i * 89.3 + i * 13.7) % (h * 0.6);
+    const twinkle = Math.sin(time * 0.0008 + i) * 0.5 + 0.5;
+    ctx.globalAlpha = twinkle * 0.4;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  const pillarGrad = ctx.createLinearGradient(0, 0, 0, h);
+  pillarGrad.addColorStop(0, '#10b98108');
+  pillarGrad.addColorStop(1, '#10b98102');
+  ctx.fillStyle = pillarGrad;
+  ctx.fillRect(w * 0.06, h * 0.15, w * 0.025, h * 0.45);
+  ctx.fillRect(w * 0.915, h * 0.15, w * 0.025, h * 0.45);
+}
+
+function drawMason(time) {
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h * 0.42;
+  masonScale = Math.min(w, h) / 400;
+  const s = masonScale;
+  const bob = Math.sin(time * 0.0015) * 5;
+  masonBob = bob;
 
   ctx.save();
   ctx.translate(cx, cy + bob);
 
-  // Glow
-  const grad = ctx.createRadialGradient(0, 0, 10 * s, 0, 0, 50 * s);
-  grad.addColorStop(0, mainColor + '33');
-  grad.addColorStop(1, 'transparent');
-  ctx.fillStyle = grad;
+  const glow = ctx.createRadialGradient(0, 0, 20 * s, 0, 0, 100 * s);
+  glow.addColorStop(0, '#10b98115');
+  glow.addColorStop(0.5, '#10b98108');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 0, 50 * s, 0, Math.PI * 2);
+  ctx.arc(0, 0, 100 * s, 0, Math.PI * 2);
   ctx.fill();
 
-  // Body (robe)
-  ctx.fillStyle = mainColor + '44';
+  ctx.fillStyle = '#1a4a1a';
   ctx.beginPath();
-  ctx.moveTo(-18 * s, 5 * s);
-  ctx.lineTo(18 * s, 5 * s);
-  ctx.lineTo(22 * s, 40 * s);
-  ctx.lineTo(-22 * s, 40 * s);
+  ctx.moveTo(-25 * s, 10 * s);
+  ctx.lineTo(25 * s, 10 * s);
+  ctx.lineTo(30 * s, 60 * s);
+  ctx.lineTo(-30 * s, 60 * s);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = mainColor + '66';
+  ctx.strokeStyle = '#2d6b2d';
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // Head
-  ctx.fillStyle = mainColor + '55';
+  ctx.fillStyle = '#2d6b2d';
   ctx.beginPath();
-  ctx.arc(0, -8 * s, 14 * s, 0, Math.PI * 2);
+  ctx.moveTo(-30 * s, 60 * s);
+  ctx.lineTo(30 * s, 60 * s);
+  ctx.lineTo(35 * s, 80 * s);
+  ctx.lineTo(-35 * s, 80 * s);
+  ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = mainColor + '88';
+
+  ctx.fillStyle = '#c4956a';
+  ctx.beginPath();
+  ctx.arc(0, -10 * s, 18 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#5a3a2a';
+  ctx.beginPath();
+  ctx.ellipse(0, 2 * s, 12 * s, 8 * s, 0, 0, Math.PI);
+  ctx.fill();
+
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.arc(-6 * s, -12 * s, 2.5 * s, 0, Math.PI * 2);
+  ctx.arc(6 * s, -12 * s, 2.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#10b981';
+  ctx.beginPath();
+  ctx.arc(-6 * s, -12 * s, 1 * s, 0, Math.PI * 2);
+  ctx.arc(6 * s, -12 * s, 1 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#0d3d0d';
+  ctx.beginPath();
+  ctx.arc(0, -28 * s, 22 * s, Math.PI, 0, true);
+  ctx.lineTo(22 * s, -20 * s);
+  ctx.quadraticCurveTo(0, -14 * s, -22 * s, -20 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#1a5a1a';
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // Eyes
-  ctx.fillStyle = '#e0dcc0';
-  ctx.beginPath();
-  ctx.arc(-5 * s, -9 * s, 2.5 * s, 0, Math.PI * 2);
-  ctx.arc(5 * s, -9 * s, 2.5 * s, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Hood/cowl
-  ctx.strokeStyle = mainColor + '77';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, -8 * s, 16 * s, Math.PI * 0.8, Math.PI * 0.2, true);
-  ctx.stroke();
-
-  // Outfit items
-  if (npc.outfit.body) {
-    ctx.fillStyle = mainColor + '88';
-    ctx.fillRect(-16 * s, 12 * s, 32 * s, 20 * s);
-  }
-  if (npc.outfit.head) {
-    ctx.fillStyle = '#f7c948' + '88';
+  const outfit = store.state.outfit;
+  if (outfit.head) {
+    ctx.fillStyle = '#f7c94844';
     ctx.beginPath();
-    ctx.arc(0, -10 * s, 18 * s, 0, Math.PI * 2);
+    ctx.arc(0, -30 * s, 25 * s, Math.PI, 0, true);
     ctx.fill();
   }
-  if (npc.outfit.accessory) {
-    ctx.fillStyle = '#10b981' + 'aa';
+  if (outfit.body) {
+    ctx.fillStyle = '#3b82f622';
+    ctx.fillRect(-22 * s, 12 * s, 44 * s, 30 * s);
+  }
+  if (outfit.accessory) {
+    ctx.fillStyle = '#a855f744';
     ctx.beginPath();
-    ctx.arc(0, -8 * s, 4 * s, 0, Math.PI * 2);
+    ctx.arc(0, -8 * s, 6 * s, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Arms
-  ctx.strokeStyle = mainColor + '55';
-  ctx.lineWidth = 3 * s;
-  const armWave = Math.sin(time * 0.003 + npc.id.charCodeAt(0)) * 3;
+  ctx.strokeStyle = '#c4956a';
+  ctx.lineWidth = 4 * s;
+  const armWave = Math.sin(time * 0.002) * 4;
   ctx.beginPath();
-  ctx.moveTo(-18 * s, 10 * s);
-  ctx.lineTo(-28 * s, 20 * s + armWave);
+  ctx.moveTo(-25 * s, 18 * s);
+  ctx.lineTo(-40 * s, 30 * s + armWave);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(18 * s, 10 * s);
-  ctx.lineTo(28 * s, 20 * s - armWave);
+  ctx.moveTo(25 * s, 18 * s);
+  ctx.lineTo(40 * s, 30 * s - armWave);
   ctx.stroke();
-
-  // Happiness indicator
-  const happyPct = npc.happiness / 100;
-  ctx.fillStyle = happyPct > 0.5 ? '#10b981' : '#f7c948';
-  ctx.fillRect(-15 * s, -32 * s, 30 * s * happyPct, 3 * s);
-
-  // Name
-  const npcDef = store.getAllNPCs().find(n => n.id === npc.id);
-  if (npcDef) {
-    ctx.fillStyle = '#e0dcc066';
-    ctx.font = `${10 * s}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.fillText(npcDef.name, 0, 52 * s);
-  }
 
   ctx.restore();
 }
 
-/* ─── Background ─── */
-function drawBackground(time) {
-  const w = canvas.width;
-  const h = canvas.height;
-
-  // Dark gradient
-  const bg = ctx.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.3, w * 0.7);
-  bg.addColorStop(0, '#1a1a1a');
-  bg.addColorStop(0.5, '#0d0d0d');
-  bg.addColorStop(1, '#000000');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, w, h);
-
-  // Floor line
-  ctx.strokeStyle = '#10b98111';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, h * 0.55);
-  ctx.lineTo(w, h * 0.55);
-  ctx.stroke();
-
-  // Temple pillars
-  const pillarGrad = ctx.createLinearGradient(0, 0, 0, h);
-  pillarGrad.addColorStop(0, '#10b98108');
-  pillarGrad.addColorStop(1, '#10b98103');
-  ctx.fillStyle = pillarGrad;
-  ctx.fillRect(w * 0.05, h * 0.2, w * 0.02, h * 0.35);
-  ctx.fillRect(w * 0.93, h * 0.2, w * 0.02, h * 0.35);
-
-  // Stars
-  ctx.fillStyle = '#e0dcc020';
-  for (let i = 0; i < 30; i++) {
-    const sx = (i * 137.5 + i * i * 7.3) % w;
-    const sy = (i * 89.3 + i * 13.7) % (h * 0.5);
-    const twinkle = Math.sin(time * 0.001 + i) * 0.5 + 0.5;
-    ctx.globalAlpha = twinkle * 0.5;
-    ctx.fillRect(sx, sy, 1.5, 1.5);
-  }
-  ctx.globalAlpha = 1;
-}
-
-/* ─── Game Loop ─── */
 function updateParticles() {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += 0.08;
+    p.vy += 0.1;
     p.life -= p.decay;
     if (p.life <= 0) particles.splice(i, 1);
   }
   for (let i = floatTexts.length - 1; i >= 0; i--) {
     const f = floatTexts[i];
     f.y += f.vy;
-    f.life -= 0.015;
+    f.life -= 0.018;
     if (f.life <= 0) floatTexts.splice(i, 1);
   }
 }
@@ -260,50 +241,21 @@ function drawParticles() {
   for (const f of floatTexts) {
     ctx.globalAlpha = f.life;
     ctx.fillStyle = f.color;
-    ctx.font = 'bold 16px monospace';
+    ctx.font = `bold ${14}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText(f.text, f.x, f.y);
   }
   ctx.globalAlpha = 1;
 }
 
-function updateNPCs(time) {
-  const s = store.state;
-  for (const npc of s.activeNPCs) {
-    if (!s.unlockedNPCs.includes(npc.id)) continue;
-    // Random walk
-    npc.x += npc.vx;
-    npc.y += npc.vy;
-    // Boundary bounce
-    if (npc.x < 5 || npc.x > 95) npc.vx *= -1;
-    if (npc.y < 15 || npc.y > 60) npc.vy *= -1;
-    // Random direction change
-    if (Math.random() < 0.005) {
-      npc.vx = (Math.random() - 0.5) * 0.3;
-      npc.vy = (Math.random() - 0.5) * 0.2;
-    }
-    // Happiness decay
-    if (Math.random() < 0.001) npc.happiness = Math.max(0, npc.happiness - 0.5);
-  }
-}
-
 function loop(time) {
   if (!lastTime) lastTime = time;
-  const dt = time - lastTime;
   lastTime = time;
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground(time);
-  updateNPCs(time);
-  // Draw NPCs
-  const s = store.state;
-  for (const npc of s.activeNPCs) {
-    if (!s.unlockedNPCs.includes(npc.id)) continue;
-    drawNPC(npc, time);
-  }
+  drawMason(time);
   updateParticles();
   drawParticles();
-
   animFrame = requestAnimationFrame(loop);
 }
 
