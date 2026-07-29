@@ -1,353 +1,231 @@
-import { store } from './store.js';
-import { t, getLang, initLang, setLang } from './i18n.js';
-import { playTap, playCollect, playMerge, playError } from './sounds.js';
-import { initGameCanvas, stopGame } from './game.js';
-import { initWallet, connectWallet, disconnectWallet, getWalletAddress, buyApe, getApeRate } from './wallet.js';
-import { loadUserData, saveUserData, getOrCreateUserId } from './firebase.js';
-import { ITEMS, MERGE_COST, MERGE_MATRIX } from './config.js';
+const ASSET = 'assets/';
+window.Telegram?.WebApp?.ready();
+window.Telegram?.WebApp?.expand();
 
-let currentScreen = 'game';
-let selectedCategory = 'all';
-let statsEl, overlayEl, toastEl;
+import { loadUserData, saveUserData } from './firebase.js';
+import { initWallet, connectWallet, disconnectWallet, isWalletConnected, getWalletAddress, setStatusChangeHandler } from './wallet.js';
 
-function toast(msg) {
-  toastEl.textContent = msg;
-  toastEl.classList.add('show');
-  setTimeout(() => toastEl.classList.remove('show'), 2200);
-}
-
-function showScreen(screen) {
-  currentScreen = screen;
-  show();
-}
-
-function renderCurrencyBar() {
-  const s = store.getState();
-  return `
-    <div class="currency-bar">
-      <span class="currency-item">🍌 ${s.bananas}</span>
-      <span class="currency-item">⭐ ${s.gold}</span>
-      <span class="currency-item">◆ ${s.ape || 0}</span>
-    </div>`;
-}
-
-function renderHeader() {
-  const titles = { game: t('main'), collection: t('collection'), merge: t('merge'), shop: t('shop'), stats: t('stats') };
-  const showBack = currentScreen !== 'game';
-  const langLabel = getLang() === 'en' ? 'RU' : 'EN';
-  return `
-    <header class="header">
-      ${showBack ? `<button class="btn-icon" onclick="W._back()">←</button>` : '<span></span>'}
-      <h1 class="header-title">${titles[currentScreen]}</h1>
-      <button class="btn-icon" onclick="W._lang()">${langLabel}</button>
-    </header>`;
-}
-
-function renderNav() {
-  const tabs = [
-    { id: 'game', icon: '🐻', label: t('main') },
-    { id: 'collection', icon: '☰', label: t('collection') },
-    { id: 'merge', icon: '⬡', label: t('merge') },
-    { id: 'shop', icon: '🛒', label: t('shop') },
-    { id: 'stats', icon: '⚔', label: t('stats') }
-  ];
-  return `
-    <nav class="bottom-nav">
-      ${tabs.map(tb => `
-        <button class="nav-btn ${currentScreen === tb.id ? 'active' : ''}" onclick="W._nav('${tb.id}')">
-          <span class="nav-icon">${tb.icon}</span>
-          <span class="nav-label">${tb.label}</span>
-        </button>`).join('')}
-    </nav>`;
-}
-
-function renderGameScreen() {
-  const rank = store.getRank();
-  const s = store.getState();
-  const xpForNext = 100 * (1 + store.getState().level);
-  const xpPercent = Math.min(100, ((s.xp || 0) / xpForNext) * 100);
-  return `
-    <section class="screen screen-game">
-      <div class="rank-badge">${rank.name}</div>
-      <div class="level-row">${t('level')} ${s.level || 1}</div>
-      <div class="xp-bar-wrap">
-        <div class="xp-bar" style="width:${xpPercent}%"></div>
-        <span class="xp-text">${s.xp || 0} / ${xpForNext}</span>
-      </div>
-      <div class="canvas-wrap" onclick="W._tap()">
-        <canvas id="gameCanvas" width="300" height="300"></canvas>
-      </div>
-      <p class="tap-hint">${t('tapHint')}</p>
-      <div class="stats-row">
-        <span>💪 ${s.stats?.strength || 0}</span>
-        <span>🏃 ${s.stats?.stamina || 0}</span>
-        <span>⚡ ${s.stats?.speed || 0}</span>
-        <span>🍀 ${s.stats?.luck || 0}</span>
-      </div>
-    </section>`;
-}
-
-function renderCollectionScreen() {
-  const items = store.getAllItems();
-  const rarities = store.getRarities();
-  const categories = store.getCategories();
-  const s = store.getState();
-  const owned = s.inventory || {};
-
-  const filtered = items.filter(item => {
-    if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
-    return true;
-  });
-
-  const total = items.length;
-  const ownedCount = Object.keys(owned).length;
-
-  const catTabs = [
-    { id: 'all', label: t('all') },
-    { id: 'banana', label: t('bananas') },
-    { id: 'dumbbell', label: t('dumbbells') }
-  ];
-
-  return `
-    <section class="screen screen-collection">
-      <div class="progress-bar-wrap">
-        <div class="progress-bar" style="width:${((ownedCount / total) * 100).toFixed(1)}%"></div>
-        <span class="progress-text">${ownedCount} / ${total}</span>
-      </div>
-      <div class="cat-tabs">
-        ${catTabs.map(c => `
-          <button class="cat-tab ${selectedCategory === c.id ? 'active' : ''}" onclick="W._cat('${c.id}')">${c.label}</button>`).join('')}
-      </div>
-      <div class="items-grid">
-        ${filtered.map(item => {
-          const rarity = rarities.find(r => r.id === item.rarity) || {};
-          const count = owned[item.id] || 0;
-          return `
-            <div class="item-card" style="border-color:${rarity.color || '#666'}">
-              <img src="${item.image}" alt="${item.name}" class="item-img" onerror="this.src='./src/assets/placeholder.png'">
-              <div class="item-name">${item.name}</div>
-              <div class="item-rarity" style="color:${rarity.color || '#aaa'}">${rarity.name || item.rarity}</div>
-              <div class="item-count">${count > 0 ? '×' + count : ''}</div>
-            </div>`;
-        }).join('')}
-      </div>
-    </section>`;
-}
-
-function renderMergeScreen() {
-  const s = store.getState();
-  const slots = s.mergeSlots || [null, null, null, null];
-  const rarities = store.getRarities();
-
-  const slotEls = slots.map((uid, idx) => {
-    if (!uid) return `<div class="merge-slot empty" onclick="W._addToSlot(${idx})">+</div>`;
-    const item = (store.getAllItems() || []).find(i => i.uid === uid) || {};
-    const rarity = rarities.find(r => r.id === item.rarity) || {};
-    return `
-      <div class="merge-slot filled" style="border-color:${rarity.color || '#666'}">
-        <img src="${item.image}" alt="${item.name}" class="merge-slot-img" onerror="this.src='./src/assets/placeholder.png'">
-        <button class="merge-remove" onclick="W._removeSlot(${idx})">×</button>
-      </div>`;
-  });
-
-  return `
-    <section class="screen screen-merge">
-      <div class="merge-grid">${slotEls.join('')}</div>
-      <button class="btn-merge" onclick="W._doMerge()">${t('merge')} (⭐ ${MERGE_COST || 0})</button>
-    </section>`;
-}
-
-function renderShopScreen() {
-  const s = store.getState();
-  const rarities = store.getRarities();
-  const dumbbells = (store.getAllItems() || []).filter(i => i.category === 'dumbbell');
-
-  return `
-    <section class="screen screen-shop">
-      <h2 class="section-title">${t('dumbbells')}</h2>
-      <div class="shop-list">
-        ${dumbbells.map(item => {
-          const rIdx = rarities.findIndex(r => r.id === item.rarity);
-          const cost = 10 * Math.pow(3, Math.max(0, rIdx));
-          return `
-            <div class="shop-item">
-              <img src="${item.image}" alt="${item.name}" class="shop-item-img" onerror="this.src='./src/assets/placeholder.png'">
-              <div class="shop-item-info">
-                <div class="shop-item-name">${item.name}</div>
-                <div class="shop-item-cost">🍌 ${cost}</div>
-              </div>
-              <button class="btn-buy" onclick="W._buyItem('${item.id}')">${t('buy')}</button>
-            </div>`;
-        }).join('')}
-      </div>
-      <div class="ton-section">
-        <h3>TON Wallet</h3>
-        ${s.walletConnected
-          ? `<span class="wallet-addr">${(s.walletAddr || '').slice(0, 6)}...${(s.walletAddr || '').slice(-4)}</span>
-             <button class="btn-disconnect" onclick="W._disconnectWallet()">${t('disconnect')}</button>
-             <button class="btn-buy-ape" onclick="W._buyApe()">Buy $APE</button>`
-          : `<button class="btn-connect" onclick="W._connectWallet()">${t('connectWallet')}</button>`}
-      </div>
-    </section>`;
-}
-
-function renderStatsScreen() {
-  const s = store.getState();
-  const stats = s.stats || { strength: 0, stamina: 0, speed: 0, luck: 0 };
-  const statDefs = [
-    { key: 'strength', icon: '💪', label: t('strength') },
-    { key: 'stamina', icon: '🏃', label: t('stamina') },
-    { key: 'speed', icon: '⚡', label: t('speed') },
-    { key: 'luck', icon: '🍀', label: t('luck') }
-  ];
-
-  return `
-    <section class="screen screen-stats">
-      ${statDefs.map(sd => `
-        <div class="stat-row">
-          <span class="stat-icon">${sd.icon}</span>
-          <span class="stat-label">${sd.label}</span>
-          <div class="stat-bar-wrap">
-            <div class="stat-bar" style="width:${Math.min(100, (stats[sd.key] || 0) * 2)}%"></div>
-          </div>
-          <span class="stat-val">${stats[sd.key] || 0}</span>
-          <button class="btn-upgrade" onclick="W._upgradeStat('${sd.key}')">⬆</button>
-        </div>`).join('')}
-    </section>`;
-}
-
-function renderScreen() {
-  switch (currentScreen) {
-    case 'game': return renderGameScreen();
-    case 'collection': return renderCollectionScreen();
-    case 'merge': return renderMergeScreen();
-    case 'shop': return renderShopScreen();
-    case 'stats': return renderStatsScreen();
-    default: return renderGameScreen();
+function getOrCreateUserId() {
+  let uid = localStorage.getItem('ape_user_id');
+  if (!uid) {
+    uid = 'user_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+    localStorage.setItem('ape_user_id', uid);
   }
+  return uid;
 }
 
-export function show() {
-  const app = document.getElementById('app');
-  if (!app) return;
-  app.innerHTML = `
-    <div class="app-container">
-      ${renderHeader()}
-      ${renderCurrencyBar()}
-      <main class="main-content">${renderScreen()}</main>
-      ${renderNav()}
-    </div>`;
-
-  statsEl = document.getElementById('statsOverlay');
-  overlayEl = document.getElementById('mergeOverlay');
-  toastEl = document.getElementById('toast');
-
-  if (currentScreen === 'game') { stopGame(); initGameCanvas(document.getElementById('gameCanvas'), function() { playTap(); }); }
-}
-
-window.W = {
-  _nav: (screen) => { playTap(); showScreen(screen); },
-  _lang: () => { setLang(getLang() === 'en' ? 'ru' : 'en'); show(); },
-  _cat: (cat) => { selectedCategory = cat; show(); },
-  _addToSlot: (idx) => {
-    const s = store.getState();
-    const inv = s.inventory || {};
-    const owned = Object.keys(inv).find(k => inv[k] > 0);
-    if (owned) {
-      store.placeInMergeSlot(idx, owned);
-      show();
-    } else {
-      toast(t('noItems'));
-    }
-  },
-  _removeSlot: (idx) => { store.removeFromMergeSlot(idx); show(); },
-  _placeInSlot: (idx, uid) => { store.placeInMergeSlot(idx, uid); show(); },
-  _doMerge: () => {
-    const result = store.tryMerge();
-    if (result) {
-      toast(t('mergeSuccess'));
-    } else {
-      toast(t('mergeFail'));
-    }
-    show();
-  },
-  _buyItem: (id) => {
-    if (store.buyItem(id)) {
-      toast(t('bought'));
-    } else {
-      toast(t('notEnough'));
-    }
-    show();
-  },
-  _connectWallet: async () => {
-    try {
-      await connectWallet();
-      toast(t('walletConnected'));
-    } catch (e) {
-      toast(t('walletFail'));
-    }
-    show();
-  },
-  _disconnectWallet: () => {
-    disconnectWallet();
-    toast(t('walletDisconnected'));
-    show();
-  },
-  _buyApe: async () => {
-    try {
-      await buyApe();
-      toast(t('apePurchased'));
-    } catch (e) {
-      toast(t('apeFail'));
-    }
-    show();
-  },
-  _upgradeStat: (key) => {
-    if (store.upgradeStat(key)) {
-      toast(t('upgraded'));
-    } else {
-      toast(t('notEnoughGold'));
-    }
-    show();
-  },
-  _back: () => { currentScreen = 'game'; show(); },
-  _show: (screen) => { showScreen(screen); },
-  _daily: () => {
-    const s = store.getState();
-    const now = Date.now();
-    if (s.dailyClaimed && (now - s.dailyClaimed) < 86400000) {
-      toast(t('alreadyClaimed'));
-      return;
-    }
-    store.setState({ dailyClaimed: now, bananas: (s.bananas || 0) + 50 });
-    toast('+50 🍌');
-  },
-  _tap: () => {
-    const result = store.tapGorilla();
-    show();
-  }
+const state = {
+  tab: 'inventory',
+  bananas: 1280,
+  gems: 42,
+  grid: [1,1,2,2,3,3,4,4,0,1,0,2,0,3,0,0,4,0,0,1,0,2,0,0,3,0,0,4,0,0,1,0,0,2,0,0,3,0,0,4,0,0,1,0,0,2,0,0,3],
+  queue: [1,1,2,1],
+  feed: 62,
+  walletConnected: false,
+  walletAddr: ''
 };
 
-async function init() {
-  initLang();
-  const userId = getOrCreateUserId();
-  await loadUserData(userId);
+const $ = s => document.querySelector(s);
+const image = l => `${ASSET}dumbbell-${String(l).padStart(2, '0')}.png`;
 
-  const toastContainer = document.createElement('div');
-  toastContainer.id = 'toast';
-  toastContainer.className = 'toast';
-  document.body.appendChild(toastContainer);
-
-  initWallet();
-
-  if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
-  }
-
-  show();
-
-  setInterval(() => saveUserData(userId), 30000);
+function sync() {
+  $('#bananas').textContent = state.bananas.toLocaleString('ru-RU');
+  $('#gems').textContent = state.gems;
 }
 
-document.addEventListener('DOMContentLoaded', init);
+function toast(t) {
+  const el = $('#toast');
+  el.textContent = t;
+  el.classList.add('show');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+function buzz() { navigator.vibrate?.(25); }
+
+function item(level, extra = '') {
+  return `<img ${extra} draggable="true" class="dumbbell" src="${image(level)}" alt="Гантель уровня ${level}">`;
+}
+
+function inventory() {
+  return `<div class="inventory-head"><div><h1>Инвентарь</h1><p class="sub">Соединяй одинаковые гантели</p></div><span class="tag">7 × 7</span></div><div id="grid" class="grid">${state.grid.map((l, i) => `<div class="slot ${l ? '' : 'empty'}" data-index="${i}" ${l ? `data-level="${l}"` : ''}>${l ? item(l, `data-index="${i}"`) : ''}</div>`).join('')}</div><p class="hint">Зажми гантель и перетащи её в свободную ячейку или на такую же.</p><section class="queue-card"><div class="queue-title">СЛЕДУЮЩАЯ ГАНТЕЛЬ · В ОЧЕРЕДИ ЕЩЁ ${state.queue.length}</div><div class="queue">${state.queue.map((l, i) => `<div class="queue-item">${item(l)}<button aria-label="Поставить гантель" data-queue="${i}"></button><time>${i ? '02:27:01' : 'Готово'}</time></div>`).join('')}</div></section>`;
+}
+
+function gorillas() {
+  return `<h1>Гориллы</h1><p class="sub">Корми бойца — повышай его уровень.</p><section class="gorilla-card"><div class="rarity">● RARE · LVL 7</div><h2>БРУНО</h2><img src="${ASSET}gorilla-03.png" alt="Горилла Бруно"><div class="progress"><b style="width:${state.feed}%"></b></div><button id="feed" class="feed">ЖМИ И КОРМИ 🍌 75</button></section>`;
+}
+
+function market() {
+  let levels = [4, 6, 8, 10];
+  return `<h1>Рынок</h1><p class="sub">Аукционы стаи · обновляются в реальном времени</p><div class="cards">${levels.map((l, i) => `<article class="lot"><img src="${image(l)}" alt="Лот"><div><b>Гантель LVL ${l}</b><small>Закончится через 0${i + 1}:1${i}:2${i}</small><br><small>Ставка: ${300 * (i + 1)} 🍌</small></div><button data-buy="${300 * (i + 1)}">СТАВКА</button></article>`).join('')}</div><div class="wallet-section"><h3>TON Wallet</h3>${state.walletConnected ? `<span class="wallet-addr">${(state.walletAddr || '').slice(0, 6)}...${(state.walletAddr || '').slice(-4)}</span><button class="btn-disconnect" id="disconnectWallet">Отключить</button>` : `<button class="btn-connect" id="connectWallet">Подключить кошелёк</button>`}</div>`;
+}
+
+function quests() {
+  let q = [
+    ['🔗', 'Соедини гантели 50 раз', '30 / 50', 60],
+    ['🍌', 'Накорми горилл 10 раз', '4 / 10', 40],
+    ['⚡', 'Собери 500 бананов', '500 / 500', 100]
+  ];
+  return `<h1>Задания</h1><p class="sub">Ежедневные награды</p><div class="cards">${q.map(([ico, title, v, p], i) => `<article class="quest"><span class="icon">${ico}</span><div><b>${title}</b><small>${v}</small><div class="mini-progress"><span style="width:${p}%"></span></div></div>${i === 2 ? '<button class="claim">ЗАБРАТЬ</button>' : '<small>В РАБОТЕ</small>'}</article>`).join('')}</div>`;
+}
+
+function clan() {
+  return `<section class="panel clan"><div class="crest">♜</div><h1>СТАЯ «ГОРИЛЛЫ»</h1><p class="sub">12 участников · общий уровень 214</p><div class="progress"><b style="width:74%"></b></div><p class="hint">До следующего уровня стаи: 2 600 силы</p></section>`;
+}
+
+function render() {
+  const v = { inventory, gorillas, market, quests, clan }[state.tab];
+  $('#screen').innerHTML = v();
+  document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
+  sync();
+  if (state.tab === 'inventory') bindGrid();
+  if (state.tab === 'market') bindMarket();
+}
+
+function bindGrid() {
+  let from = null;
+  const move = to => {
+    if (from === null || from === to) return;
+    const a = state.grid[from], b = state.grid[to];
+    if (!b) {
+      state.grid[to] = a;
+      state.grid[from] = 0;
+      toast('Гантель перемещена');
+    } else if (a === b && a < 10) {
+      state.grid[to] = a + 1;
+      state.grid[from] = 0;
+      state.bananas += a * 20;
+      toast(`MERGE! +${a * 20} 🍌`);
+      buzz();
+    } else {
+      [state.grid[to], state.grid[from]] = [a, b];
+      toast('Поменяли местами');
+    }
+    render();
+  };
+  document.querySelectorAll('.dumbbell').forEach(el => {
+    el.addEventListener('dragstart', e => { from = +el.dataset.index; e.dataTransfer.effectAllowed = 'move'; });
+    el.addEventListener('dragend', () => from = null);
+    el.addEventListener('pointerdown', e => {
+      if (el.dataset.index === undefined) return;
+      from = +el.dataset.index;
+      el.setPointerCapture?.(e.pointerId);
+      el.classList.add('touching');
+    });
+    el.addEventListener('pointerup', e => {
+      const slot = document.elementFromPoint(e.clientX, e.clientY)?.closest('.slot');
+      el.classList.remove('touching');
+      if (slot) move(+slot.dataset.index);
+      from = null;
+    });
+    el.addEventListener('pointercancel', () => { from = null; el.classList.remove('touching'); });
+  });
+  document.querySelectorAll('.slot').forEach(s => {
+    s.addEventListener('dragover', e => { e.preventDefault(); s.classList.add('drag-over'); });
+    s.addEventListener('dragleave', () => s.classList.remove('drag-over'));
+    s.addEventListener('drop', e => { e.preventDefault(); s.classList.remove('drag-over'); move(+s.dataset.index); });
+  });
+  document.querySelectorAll('[data-queue]').forEach(b => b.addEventListener('click', () => {
+    let idx = state.grid.indexOf(0);
+    if (idx < 0) return toast('Нет свободных ячеек');
+    state.grid[idx] = state.queue.shift();
+    state.queue.push(1);
+    toast('Гантель на поле');
+    buzz();
+    render();
+  }));
+}
+
+function bindMarket() {
+  const connectBtn = document.getElementById('connectWallet');
+  const disconnectBtn = document.getElementById('disconnectWallet');
+  if (connectBtn) {
+    connectBtn.addEventListener('click', async () => {
+      const addr = await connectWallet();
+      if (addr) {
+        state.walletConnected = true;
+        state.walletAddr = addr;
+        toast('Кошелёк подключён');
+      } else {
+        toast('Не удалось подключить');
+      }
+      render();
+    });
+  }
+  if (disconnectBtn) {
+    disconnectBtn.addEventListener('click', () => {
+      disconnectWallet();
+      state.walletConnected = false;
+      state.walletAddr = '';
+      toast('Кошелёк отключён');
+      render();
+    });
+  }
+}
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab) {
+    state.tab = tab.dataset.tab;
+    render();
+  }
+  const buy = e.target.closest('[data-buy]');
+  if (buy) {
+    let n = +buy.dataset.buy;
+    if (state.bananas < n) return toast('Недостаточно бананов');
+    state.bananas -= n;
+    toast('Ставка принята');
+    buzz();
+    sync();
+  }
+  if (e.target.id === 'feed') {
+    if (state.bananas < 75) return toast('Недостаточно бананов');
+    state.bananas -= 75;
+    state.feed = Math.min(100, state.feed + 10);
+    toast('Бруно стал сильнее!');
+    buzz();
+    render();
+  }
+  if (e.target.closest('.claim')) {
+    state.gems += 5;
+    toast('+5 ✦ получено');
+    buzz();
+    render();
+  }
+});
+
+async function loadStateFromFirebase(userId) {
+  const data = await loadUserData(userId);
+  if (data) {
+    if (typeof data.bananas === 'number') state.bananas = data.bananas;
+    if (typeof data.gems === 'number') state.gems = data.gems;
+    if (Array.isArray(data.grid) && data.grid.length === 49) state.grid = data.grid;
+    if (Array.isArray(data.queue)) state.queue = data.queue;
+    if (typeof data.feed === 'number') state.feed = data.feed;
+  }
+}
+
+function getSerializableState() {
+  return {
+    bananas: state.bananas,
+    gems: state.gems,
+    grid: state.grid,
+    queue: state.queue,
+    feed: state.feed
+  };
+}
+
+async function init() {
+  const userId = getOrCreateUserId();
+  initWallet();
+  setStatusChangeHandler(addr => {
+    state.walletConnected = !!addr;
+    state.walletAddr = addr || '';
+    if (state.tab === 'market') render();
+  });
+  await loadStateFromFirebase(userId);
+  render();
+  setInterval(() => saveUserData(userId, getSerializableState()), 30000);
+}
+
+init();

@@ -1,0 +1,2 @@
+.dumbbell { touch-action: none; }
+.dumbbell.touching { transform: scale(1.12); opacity: .8; }
