@@ -48,6 +48,7 @@ const state = {
   tab: 'gorillas',
   bananas: 200,
   gems: 0,
+  apeCoins: 0,
   grid: [0,0,0,0,0,0,0, 0,0,0,0,0,0,0, 0,0,1,1,1,0,0, 0,0,1,1,1,0,0, 0,0,1,1,1,0,0, 0,0,0,0,0,0,0, 0,0,0,0,0,0,0],
   queue: [1,1,1],
   gorillas: [
@@ -67,7 +68,12 @@ const state = {
   walletConnected: false,
   walletAddr: '',
   tutorialDone: false,
-  lockedCells: []
+  lockedCells: [],
+  referralCode: '',
+  referredBy: '',
+  referrerRewarded: false,
+  collectibles: [], // { cellIdx, level, timer }
+  trainingBoost: 0 // multiplier (1 = normal, 2 = 2x)
 };
 
 // Generate locked cells — only center 3×3 open
@@ -126,6 +132,13 @@ function gorillas() {
   const canTap = !inTraining && state.bananas >= currentTapCost && g.feed < 100;
   const trainingDone = g.trainingEnd > 0 && g.trainingEnd <= Date.now();
 
+  // Поза тренировки: gorilla-03.png + гантеля
+  const trainingPose = inTraining || trainingDone;
+  const gorillaImg = trainingPose ? ASSET + 'gorilla-03.png' : getGorillaImg(g.rarity);
+  const dumbbellOverlay = trainingPose ? `<img src="${image(Math.max(1, r.dumbbellLevel))}" class="training-dumbbell" />` : '';
+
+  const boostCost = 50 + g.level * 10;
+
   let content = `
     <div class="gorilla-full">
       <div class="gorilla-full-card rarity-${r.id}" id="gorilla-tap-area">
@@ -134,7 +147,10 @@ function gorillas() {
           <div class="gorilla-level-badge">LVL ${g.level}</div>
         </div>
         <div class="gorilla-tap-img-wrap">
-          <img src="${inTraining ? ASSET + 'gorilla-03.png' : getGorillaImg(g.rarity)}" class="gorilla-tap-img" id="gorilla-img" draggable="false" />`;
+          <div class="gorilla-img-container">
+            <img src="${gorillaImg}" class="gorilla-tap-img" id="gorilla-img" draggable="false" />
+            ${dumbbellOverlay}
+          </div>`;
 
   if (inTraining) {
     content += `<div class="training-overlay"><div class="training-icon">🏋️</div><div class="training-timer">${formatTime(trainingLeft)}</div><div class="training-label">Тренировка</div></div>`;
@@ -150,11 +166,19 @@ function gorillas() {
         <div class="gorilla-feed-bar-wrap">
           <div class="gorilla-feed-bar" style="width:${feedPct}%"></div>
           <span class="gorilla-feed-pct">${feedPct}%</span>
-        </div>
-        ${g.feed >= 100 && !inTraining && !trainingDone ? `<button class="btn-train" id="btn-send-training">🏋️ ОТПРАВИТЬ НА ТРЕНИРОВКУ</button>` : ''}
-        ${!inTraining && !trainingDone && g.feed < 100 ? `<div class="gorilla-tap-hint">Тапни по горилле чтобы покормить</div>` : ''}
-      </div>
-    </div>`;
+        </div>`;
+
+  if (g.feed >= 100 && !inTraining && !trainingDone) {
+    content += `<button class="btn-train" id="btn-send-training">🏋️ ОТПРАВИТЬ НА ТРЕНИРОВКУ</button>`;
+  }
+  if (inTraining) {
+    content += `<button class="btn-boost" id="btn-boost-training">🚀 УСКОРИТЬ (${boostCost}🍌)</button>`;
+  }
+  if (!inTraining && !trainingDone && g.feed < 100) {
+    content += `<div class="gorilla-tap-hint">Тапни по горилле чтобы покормить</div>`;
+  }
+
+  content += `</div></div>`;
 
   if (state.gorillas.length > 1) {
     content += `
@@ -162,6 +186,7 @@ function gorillas() {
       <button class="g-arrow-left" data-arrow="left">◀</button>
       <div class="gorilla-dots">${state.gorillas.map((_,i)=>`<div class="g-dot${i===state.gorillaIndex?' active':''}" data-gdot="${i}"></div>`).join('')}</div>
       <button class="g-arrow-right" data-arrow="right">▶</button>
+      <div class="swipe-hint">👆 Свайп влево/вправо</div>
     </div>`;
   }
 
@@ -179,6 +204,10 @@ function gorillas() {
           <button class="shop-mini-btn${owned?' owned':''}" data-buy="${s.id}" ${owned?'disabled':''}>${owned?'✓':'КУПИТЬ'}</button>
         </div>`;
       }).join('')}</div>
+    </div>
+    <div class="referral-section">
+      <button class="btn-referral" id="btn-referral-share">👥 Пригласить друга (+20 🪙)</button>
+      <div class="ape-coin-balance">🪙 ${state.apeCoins || 0} APE Coins</div>
     </div>`;
 
   return content;
@@ -189,7 +218,9 @@ function inventory() {
   for(let i=0;i<49;i++) {
     const lv=state.grid[i]||0;
     const locked=isLocked(i);
+    const collectible = state.collectibles.find(c => c.cellIdx === i);
     if(locked) gridHtml+=`<div class="cell locked" data-idx="${i}"><span class="locked-buy">🔒 ${(i+1)*5}🍌</span></div>`;
+    else if (collectible) gridHtml+=`<div class="cell collectible" data-idx="${i}">${item(collectible.level, ' collectible-item')}<span class="collectible-glow">✨</span></div>`;
     else gridHtml+=`<div class="cell" data-idx="${i}">${lv?`<span class="level-badge">${lv}</span>${item(lv)}`:''}</div>`;
   }
   let queueHtml=state.queue.map((lv,i)=>`<div class="q-item" data-qidx="${i}">${item(lv)}<span class="q-timer">${i===0?'Готово':'02:'+String(27+i*3).padStart(2,'0')}</span></div>`).join('');
@@ -459,15 +490,18 @@ function bindGorillaScreen() {
   });
   document.getElementById('btn-send-training')?.addEventListener('click', sendToTraining);
   document.getElementById('btn-collect-training')?.addEventListener('click', collectTraining);
+  document.getElementById('btn-boost-training')?.addEventListener('click', boostTraining);
+  document.getElementById('btn-referral-share')?.addEventListener('click', shareReferral);
   document.querySelectorAll('[data-buy]').forEach(btn => {
     btn.addEventListener('click', () => {
       buyGorilla(btn.dataset.buy);
     });
   });
+  bindGorillaSwipe();
 }
 
 function bindGrid() {
-  const cells = document.querySelectorAll('#merge-grid .cell:not(.locked)');
+  const cells = document.querySelectorAll('#merge-grid .cell:not(.locked):not(.collectible)');
   // Buy locked cells
   document.querySelectorAll('#merge-grid .cell.locked').forEach(cell => {
     cell.addEventListener('click', () => {
@@ -480,6 +514,13 @@ function bindGrid() {
       toast(`Ячейка открыта! -${price} 🍌`);
       sync();
       render();
+    });
+  });
+  // Collectible cells
+  document.querySelectorAll('#merge-grid .cell.collectible').forEach(cell => {
+    cell.addEventListener('click', e => {
+      e.stopPropagation();
+      collectFromCell(parseInt(cell.dataset.idx));
     });
   });
   let dragIdx = null;
@@ -994,9 +1035,11 @@ document.addEventListener('pointerdown', e => {
 });
 
 function getSerializableState() {
-  return { bananas: state.bananas, gems: state.gems, grid: state.grid, queue: state.queue,
+  return { bananas: state.bananas, gems: state.gems, apeCoins: state.apeCoins, grid: state.grid, queue: state.queue,
     gorillas: state.gorillas, totalTaps: state.totalTaps, totalTrainingSends: state.totalTrainingSends,
-    totalBananasEarned: state.totalBananasEarned, quests: state.quests, lockedCells: state.lockedCells, tutorialDone: state.tutorialDone };
+    totalBananasEarned: state.totalBananasEarned, quests: state.quests, lockedCells: state.lockedCells,
+    tutorialDone: state.tutorialDone, referralCode: state.referralCode, referredBy: state.referredBy,
+    referrerRewarded: state.referrerRewarded, collectibles: state.collectibles };
 }
 
 async function loadStateFromFirebase(userId) {
@@ -1027,14 +1070,116 @@ async function loadStateFromFirebase(userId) {
       if (data.totalTrainingSends !== undefined) state.totalTrainingSends = data.totalTrainingSends;
       if (data.totalBananasEarned !== undefined) state.totalBananasEarned = data.totalBananasEarned;
       if (data.quests) state.quests = data.quests;
+      if (data.apeCoins !== undefined) state.apeCoins = data.apeCoins;
+      if (data.referralCode) state.referralCode = data.referralCode;
+      if (data.referredBy) state.referredBy = data.referredBy;
+      if (data.referrerRewarded) state.referrerRewarded = data.referrerRewarded;
+      if (data.collectibles) state.collectibles = data.collectibles;
     }
   } catch (e) {
     console.warn('Failed to load from Firebase:', e);
   }
 }
 
+// ── GORILLA SWIPE ──
+function bindGorillaSwipe() {
+  const area = document.getElementById('gorilla-tap-area');
+  if (!area || state.gorillas.length < 2) return;
+  let startX = 0;
+  const onDown = e => { startX = e.clientX; };
+  const onUp = e => {
+    if (state.gorillas.length < 2) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) < 40) return;
+    if (dx > 0) state.gorillaIndex = Math.max(0, state.gorillaIndex - 1);
+    else state.gorillaIndex = Math.min(state.gorillas.length - 1, state.gorillaIndex + 1);
+    haptic('tab');
+    render();
+  };
+  area.addEventListener('pointerdown', onDown, { passive: true });
+  area.addEventListener('pointerup', onUp, { passive: true });
+}
+
+// ── TRAINING BOOST ──
+function boostTraining() {
+  const g = state.gorillas[state.gorillaIndex];
+  if (!g || g.trainingEnd <= Date.now()) { toast('Нет активной тренировки!'); return; }
+  const boostCost = 50 + g.level * 10;
+  if (state.bananas < boostCost) { toast(`Нужно ${boostCost} 🍌 для буста!`); return; }
+  state.bananas -= boostCost;
+  const remaining = g.trainingEnd - Date.now();
+  g.trainingEnd = Date.now() + Math.floor(remaining / 2);
+  toast(`🚀 Буст! Осталось ${formatTime(Math.ceil((g.trainingEnd - Date.now()) / 1000))}`);
+  haptic('collect');
+  render();
+}
+
+// ── COLLECTIBLE DUMBBELLS ON GRID ──
+function spawnCollectible() {
+  state.collectibles = state.collectibles.filter(c => state.grid[c.cellIdx] === 0 && !isLocked(c.cellIdx));
+  const emptyCells = [];
+  for (let i = 0; i < 49; i++) {
+    if (state.grid[i] === 0 && !isLocked(i)) emptyCells.push(i);
+  }
+  if (emptyCells.length === 0) return;
+  // Не спавним на клетке где уже есть коллектабл
+  const used = new Set(state.collectibles.map(c => c.cellIdx));
+  const avail = emptyCells.filter(i => !used.has(i));
+  if (avail.length === 0) return;
+  const idx = avail[Math.floor(Math.random() * avail.length)];
+  const lv = Math.ceil(Math.random() * Math.min(5, Math.floor(state.totalTrainingSends / 2) + 1));
+  state.collectibles.push({ cellIdx: idx, level: lv, timer: 120 });
+  if (state.tab === 'inventory') render();
+}
+
+function collectFromCell(idx) {
+  const ci = state.collectibles.findIndex(c => c.cellIdx === idx);
+  if (ci === -1) return;
+  const c = state.collectibles[ci];
+  const emptyIdx = state.grid.indexOf(0);
+  if (emptyIdx >= 0 && !isLocked(emptyIdx)) {
+    state.grid[emptyIdx] = c.level;
+  } else {
+    state.queue.push(c.level);
+  }
+  state.collectibles.splice(ci, 1);
+  toast(`+${DUMBBELL_NAMES[c.level] || c.level} 🏋️`);
+  haptic('collect');
+  updateQuestProgress('bananas');
+  render();
+}
+
+// ── REFERRAL ──
+function initReferral() {
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if (ref && ref !== state.referralCode && !state.referredBy) {
+    state.referredBy = ref;
+    if (!state.referrerRewarded) {
+      state.apeCoins = (state.apeCoins || 0) + 20;
+      state.referrerRewarded = true;
+      toast('🎉 +20 APE coins за приглашение друга!');
+    }
+  }
+  state.referralCode = getOrCreateUserId().replace('user_', '');
+}
+
+function getReferralLink() {
+  return `https://recksach.github.io/ape-marvel-clicker/?ref=${state.referralCode}`;
+}
+
+function shareReferral() {
+  const link = getReferralLink();
+  if (navigator.share) {
+    navigator.share({ title: 'APE MARVEL CLICKER', text: '🦍 Заходи играть!', url: link }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(link).then(() => toast('Ссылка скопирована! ✅')).catch(() => toast(link));
+  }
+}
+
 async function init() {
   state.userId = getOrCreateUserId();
+  initReferral();
   if (state.lockedCells.length === 0) generateLockedCells();
   initWallet();
   setStatusChangeHandler(addr => { state.walletConnected = !!addr; state.walletAddr = addr||''; if(state.tab==='market') render(); });
@@ -1048,6 +1193,12 @@ async function init() {
     MARKET_LOTS.forEach(lot => { if(lot.timer > 0) { lot.timer--; changed = true; } });
     if(changed && (state.tab==='gorillas' || state.tab==='market')) render();
   }, 1000);
+  // Спавн коллектаблов каждые 12 секунд
+  setInterval(() => spawnCollectible(), 12000);
+  // Обновляем коллектаблы каждые 5 сек
+  setInterval(() => {
+    if (state.collectibles.length > 0 && state.tab === 'inventory') render();
+  }, 5000);
 }
 
 // ── TUTORIAL ──
