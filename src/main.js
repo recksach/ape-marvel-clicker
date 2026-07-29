@@ -615,7 +615,7 @@ function tryMerge(a, b) {
   state.grid[b] = lvA + 1;
   state.grid[a] = 0;
 
-  const earned = lvA * 5;
+  const earned = Math.floor(lvA * 5 + Math.pow(lvA, 1.3) * 2);
   state.bananas += earned;
   state.totalBananasEarned += earned;
 
@@ -763,7 +763,7 @@ function showDumbbellDetail(level, idx) {
   const name = DUMBBELL_NAMES[level] || `Уровень ${level}`;
   const nextName = nextLevel ? DUMBBELL_NAMES[nextLevel] : null;
   const earn = level * 5;
-  const sellPrice = level * 10;
+  const sellPrice = getSellPrice(level);
 
   let pathHtml = '';
   let lv = level;
@@ -813,30 +813,47 @@ function showDumbbellDetail(level, idx) {
   }
 }
 
+function getSellPrice(level) {
+  return Math.floor(level * 8 + Math.pow(level, 1.5) * 3);
+}
+
 function sellDumbbell(idx, level) {
   if (state.grid[idx] !== level) return;
-  const price = level * 10;
+  const price = getSellPrice(level);
 
   state.grid[idx] = 0;
   state.bananas += price;
   state.totalBananasEarned += price;
 
+  // Джекпот: шанс и бонус растут с уровнем
+  const jackpotChance = Math.min(0.5, level * 0.03);
+  let jackpotBonus = 0;
+  if (Math.random() < jackpotChance) {
+    jackpotBonus = Math.floor(price * (0.5 + level * 0.15));
+    state.bananas += jackpotBonus;
+    state.totalBananasEarned += jackpotBonus;
+  }
+
   const overlay = document.getElementById('sheet-overlay');
   if (overlay) overlay.remove();
 
-  showBananaCounter(price);
+  showBananaCounter(price, jackpotBonus);
 
   haptic('collect');
-  toast(`+${price} 🍌`);
+  if (jackpotBonus > 0) {
+    toast(`🎉 ДЖЕКПОТ! +${price + jackpotBonus} 🍌 (бонус ${jackpotBonus})`);
+  } else {
+    toast(`+${price} 🍌`);
+  }
   updateQuestProgress('bananas');
   render();
 }
 
-function showBananaCounter(amount) {
+function showBananaCounter(amount, jackpot) {
   const wallet = document.getElementById('bananas');
   if (!wallet) { const counter = document.createElement('div');
   counter.className = 'banana-sell-counter';
-  counter.textContent = `+${amount} 🍌`;
+  counter.textContent = `+${amount} 🍌${jackpot ? `🎉+${jackpot}` : ''}`;
   counter.style.left = (window.innerWidth / 2 - 70) + 'px';
   counter.style.top = (window.innerHeight / 2 - 20) + 'px';
   document.body.appendChild(counter);
@@ -847,7 +864,8 @@ function showBananaCounter(amount) {
 
   setTimeout(() => counter.remove(), 1400); return; }
   const wr = wallet.getBoundingClientRect();
-  for (let i = 0; i < 3; i++) {
+  const particleCount = jackpot > 0 ? 8 : 3;
+  for (let i = 0; i < particleCount; i++) {
     const p = document.createElement('div');
     p.className = 'banana-particle';
     p.textContent = '🍌';
@@ -861,8 +879,8 @@ function showBananaCounter(amount) {
     setTimeout(() => p.remove(), 1000);
   }
   const counter = document.createElement('div');
-  counter.className = 'banana-sell-counter';
-  counter.textContent = `+${amount} 🍌`;
+  counter.className = `banana-sell-counter${jackpot > 0 ? ' jackpot' : ''}`;
+  counter.textContent = `+${amount} 🍌${jackpot > 0 ? `🎉+${jackpot}` : ''}`;
   counter.style.left = (window.innerWidth / 2 - 70) + 'px';
   counter.style.top = (window.innerHeight / 2 - 20) + 'px';
   document.body.appendChild(counter);
@@ -871,7 +889,7 @@ function showBananaCounter(amount) {
     counter.classList.add('flying');
   });
 
-  setTimeout(() => counter.remove(), 1400);
+  setTimeout(() => counter.remove(), 1500);
 }
 
 function showGorillaDetail(shopItem) {
