@@ -2,90 +2,65 @@ export const TG_BOT = 'Illuminatemasonbot';
 export const SUPPORT_URL = 'https://t.me/Superadminist';
 
 export const RARITIES = [
-  { id: 'common', name: 'Common', nameRu: 'Обычный', color: '#8b7355', bonus: 1 },
+  { id: 'common', name: 'Common', nameRu: 'Обычный', color: '#8b8b8b', bonus: 1 },
   { id: 'uncommon', name: 'Uncommon', nameRu: 'Необычный', color: '#10b981', bonus: 2 },
   { id: 'rare', name: 'Rare', nameRu: 'Редкий', color: '#3b82f6', bonus: 3 },
-  { id: 'epic', name: 'Epic', nameRu: 'Эпический', color: '#a855f7', bonus: 5 },
-  { id: 'legendary', name: 'Legendary', nameRu: 'Легендарный', color: '#f7c948', bonus: 10 },
+  { id: 'epic', name: 'Epic', nameRu: 'Эпический', color: '#f7c948', bonus: 5 },
+  { id: 'legendary', name: 'Legendary', nameRu: 'Легендарный', color: '#f59e0b', bonus: 10 },
+  { id: 'mythic', name: 'Mythic', nameRu: 'Мифический', color: '#3b82f6', bonus: 20 },
+  { id: 'ancient', name: 'Ancient', nameRu: 'Древний', color: '#10b981', bonus: 50 },
+  { id: 'divine', name: 'Divine', nameRu: 'Божественный', color: '#ef4444', bonus: 100 },
+  { id: 'secret', name: 'Secret', nameRu: 'Секретный', color: '#e0dcc0', bonus: 250 },
+  { id: 'cosmic', name: 'Cosmic', nameRu: 'Космический', color: '#a855f7', bonus: 500 },
 ];
 
 export const CATEGORIES = [
-  { id: 'weapons', name: 'Weapons', nameRu: 'Оружие', icon: '⚔' },
-  { id: 'armor', name: 'Armor', nameRu: 'Броня', icon: '🛡' },
-  { id: 'artifacts', name: 'Artifacts', nameRu: 'Артефакты', icon: '△' },
-  { id: 'potions', name: 'Potions', nameRu: 'Зелья', icon: '⚗' },
-  { id: 'scrolls', name: 'Scrolls', nameRu: 'Свитки', icon: '📜' },
-  { id: 'rings', name: 'Rings', nameRu: 'Кольца', icon: '◇' },
-  { id: 'crystals', name: 'Crystals', nameRu: 'Кристаллы', icon: '⬡' },
-  { id: 'relics', name: 'Relics', nameRu: 'Реликвии', icon: '◎' },
+  { id: 'bananas', name: 'Bananas', nameRu: 'Бананы', icon: '🍌' },
+  { id: 'dumbbells', name: 'Dumbbells', nameRu: 'Гантели', icon: '🏋' },
 ];
 
-const ITEM_NAMES = {
-  weapons: {
-    en: ['Iron Sword','Steel Blade','Shadow Dagger','Phoenix Blade','Void Axe','Dragon Spear','Rune Staff','Crystal Wand','Obsidian Katana','Emerald Halberd','Golden Mace','Moon sickle','Star Bow','Sun Hammer','Chaos Flail','Rune Sword','Ancient Spear','Divine Blade','Mythic Edge','Eternal Sword'],
-    ru: ['Железный Меч','Стальной Клинок','Тенный Кинжал','Клинок Феникса','Топор Бездны','Копьё Дракона','Рунический Посох','Кристальная Палочка','Обсидиановая Катана','Изумрудная Альбарда','Золотая Дубина','Лунный Серп','Звёздный Лук','Молот Солнца','Флэйг Хаоса','Рунический Меч','Древнее Копьё','Божественный Клинок','Мифический Остроконечник','Вечный Меч']
-  },
-  armor: {
-    en: ['Leather Vest','Chain Mail','Shadow Robe','Phoenix Plate','Void Guard','Dragon Scale','Rune Plate','Crystal Armor','Obsidian Mail','Emerald Shield','Golden Helm','Moon Cloak','Star Vest','Sun Armor','Chaos Plate','Rune Vest','Ancient Mail','Divine Plate','Mythic Guard','Eternal Plate'],
-    ru: ['Кожаный Жилет','Кольчуга','Тенный Одеянье','Пластина Феникса','Страж Бездны','Чешуя Дракона','Руническая Пластина','Кристальная Броня','Обсидиановая Кольчуга','Изумрудный Щит','Золотой Шлем','Лунный Плащ','Звёздный Жилет','Солнечная Броня','Пластина Хаоса','Рунический Жилет','Древняя Кольчуга','Божественная Пластина','Мифическая Стража','Вечная Пластина']
-  },
-  artifacts: {
-    en: ['Eye of Providence','Emerald Ankh','Golden Pyramid','Crystal Skull','Void Prism','Divine Sundial','Shadow Lantern','Ancient Seal','Rune Tablet','Masonic Compass','Dragon Scale','Phoenix Feather','Moon Dial','Star Chart','Chaos Shard','Rune Stone','Eternal Vellum','Mythic Idol','Divine Lens','Secret Codex'],
-    ru: ['Глаз Провидения','Изумрудный Анх','Золотая Пирамида','Хрустальный Череп','Призма Бездны','Божественные Часы','Теневой Фонарь','Древняя Печать','Руническая Табличка','Масонский Циркуль','Чешуя Дракона','Перо Феникса','Лунный Циферблат','Звёздная Карта','Осколок Хаоса','Рунический Камень','Вечный Пергамент','Мифический Идол','Божественная Линза','Тайный Кодекс']
-  },
-  potions: {
-    en: ['Healing Brew','Mana Elixir','Shadow Tincture','Phoenix Tear','Void Extract','Dragon Breath','Rune Oil','Crystal Serum','Obsidian Draught','Emerald Nectar','Golden Mead','Moon Water','Sun Drop','Chaos Brew','Rune Potion','Ancient Vitality','Divine Ambrosia','Mythic Tonic','Eternal Elixir','Secret Formula'],
-    ru: ['Зелье Исцеления','Эликсир Маны','Тенная Настойка','Слеза Феникса','Экстракт Бездны','Дыхание Дракона','Руническое Масло','Кристальная Сыворотка','Обсидиановый Напиток','Изумрудный Нектар','Золотой Мед','Лунная Вода','Солнечная Капля','Зелье Хаоса','Руническое Зелье','Древняя Жизненная Сила','Божественная Амброзия','Мифический Тоник','Вечный Эликсир','Секретная Формула']
-  },
-  scrolls: {
-    en: ['Scroll of Fire','Scroll of Ice','Shadow Tome','Phoenix Script','Void Rune','Dragon Lore','Rune Folio','Crystal Lexicon','Obsidian Codex','Emerald Manuscript','Golden Scroll','Moon Lore','Star Scripture','Chaos Script','Rune Tome','Ancient Scroll','Divine Scripture','Mythic Codex','Eternal Book','Secret Page'],
-    ru: ['Свиток Огня','Свиток Льда','Тенный Том','Писание Феникса','Руна Бездны','Знание Дракона','Руническое Фолио','Кристальный Лексикон','Обсидиановый Кодекс','Изумрудная Рукопись','Золотой Свиток','Лунное Знание','Звёздное Писание','Скрипт Хаоса','Рунический Том','Древний Свиток','Божественное Писание','Мифический Кодекс','Вечная Книга','Тайная Страница']
-  },
-  rings: {
-    en: ['Silver Ring','Gold Band','Shadow Signet','Phoenix Loop','Void Circle','Dragon Ring','Rune Band','Crystal Ring','Obsidian Loop','Emerald Ring','Golden Seal','Moon Circle','Star Ring','Chaos Band','Rune Signet','Ancient Ring','Divine Band','Mythic Ring','Eternal Loop','Secret Signet'],
-    ru: ['Серебряное Кольцо','Золотая Повязка','Теневой Перстень','Петля Феникса','Круг Бездны','Кольцо Дракона','Руническая Повязка','Кристальное Кольцо','Обсидиановая Петля','Изумрудное Кольцо','Золотая Печать','Лунный Круг','Звёздное Кольцо','Повязка Хаоса','Рунический Перстень','Древнее Кольцо','Божественная Повязка','Мифическое Кольцо','Вечная Петля','Тайный Перстень']
-  },
-  crystals: {
-    en: ['Emerald Shard','Golden Crystal','Black Diamond','Sapphire Gem','Ruby Heart','Amethyst Cluster','Topaz Prism','Onyx Stone','Crystal Core','Void Crystal','Divine Gem','Shadow Crystal','Rune Stone','Star Fragment','Moon Crystal','Sun Gem','Dragon Eye','Phoenix Stone','Eternal Ice','Chaos Shard'],
-    ru: ['Осколок Изумруда','Золотой Кристалл','Чёрный Алмаз','Сапфировая Глыба','Рубиновое Сердце','Гроздь Аметиста','Топазная Призма','Ониксовый Камень','Кристальное Ядро','Кристалл Бездны','Божественный Самоцвет','Теневой Кристалл','Рунический Камень','Осколок Звезды','Лунный Кристалл','Солнечный Самоцвет','Драконий Глаз','Камень Феникса','Вечный Лёд','Осколок Хаоса']
-  },
-  relics: {
-    en: ['Ancient Idol','Mason Trophy','Temple Relic','Void Figurine','Divine Statue','Shadow Effigy','Royal Bust','Dragon Miniature','Phoenix Replica','Star Globe','Moon Statue','Sun Idol','Eternal Shrine','Rune Totem','Crystal Orb','Obsidian Idol','Emerald Globe','Golden Pyramid','Chaos Effigy','Secret Relic'],
-    ru: ['Древний Идол','Трофей Масона','Храмовая Реликвия','Фигурка Бездны','Божественная Статуя','Теневой Истукан','Королевский Бюст','Миниатюра Дракона','Копия Феникса','Звёздный Глобус','Лунная Статуя','Солнечный Идол','Вечное Святилище','Рунический Тотем','Хрустальная Сфера','Обсидиановый Идол','Изумрудный Глобус','Золотая Пирамида','Истукан Хаоса','Тайная Реликвия']
-  },
+// Items matching EXACTLY what's in the screenshots
+export const ITEMS = [
+  // Bananas (3 tiers)
+  { id: 0, name: 'Banana Bunch', nameRu: 'Гроздь бананов', category: 'bananas', rarity: 'common', value: 1, image: './src/assets/banana-common.png' },
+  { id: 1, name: 'Silver Bananas', nameRu: 'Серебряные бананы', category: 'bananas', rarity: 'uncommon', value: 3, image: './src/assets/banana-uncommon.png' },
+  { id: 2, name: 'Banana Barrel', nameRu: 'Бочка бананов', category: 'bananas', rarity: 'rare', value: 10, image: './src/assets/banana-rare.png' },
+
+  // Dumbbells (10 tiers matching screenshots exactly)
+  { id: 3, name: 'Iron Dumbbell', nameRu: 'Железная гантель', category: 'dumbbells', rarity: 'common', value: 1, image: './src/assets/dumbbell-common.png' },
+  { id: 4, name: 'Steel Dumbbell', nameRu: 'Стальная гантель', category: 'dumbbells', rarity: 'uncommon', value: 3, image: './src/assets/dumbbell-uncommon.png' },
+  { id: 5, name: 'Engraved Dumbbell', nameRu: 'Гравированная гантель', category: 'dumbbells', rarity: 'rare', value: 8, image: './src/assets/dumbbell-rare.png' },
+  { id: 6, name: 'Gold Dumbbell', nameRu: 'Золотая гантель', category: 'dumbbells', rarity: 'epic', value: 20, image: './src/assets/dumbbell-epic.png' },
+  { id: 7, name: 'Royal Dumbbell', nameRu: 'Королевская гантель', category: 'dumbbells', rarity: 'legendary', value: 50, image: './src/assets/dumbbell-legendary.png' },
+  { id: 8, name: 'Sapphire Dumbbell', nameRu: 'Сапфировая гантель', category: 'dumbbells', rarity: 'mythic', value: 120, image: './src/assets/dumbbell-mythic.png' },
+  { id: 9, name: 'Emerald Dumbbell', nameRu: 'Изумрудная гантель', category: 'dumbbells', rarity: 'ancient', value: 300, image: './src/assets/dumbbell-ancient.png' },
+  { id: 10, name: 'Ruby Dumbbell', nameRu: 'Рубиновая гантель', category: 'dumbbells', rarity: 'divine', value: 750, image: './src/assets/dumbbell-divine.png' },
+  { id: 11, name: 'Crystal Dumbbell', nameRu: 'Хрустальная гантель', category: 'dumbbells', rarity: 'secret', value: 2000, image: './src/assets/dumbbell-secret.png' },
+  { id: 12, name: 'Cosmic Dumbbell', nameRu: 'Космическая гантель', category: 'dumbbells', rarity: 'cosmic', value: 5000, image: './src/assets/dumbbell-cosmic.png' },
+];
+
+export const MERGE_COST = {
+  common: 10, uncommon: 25, rare: 50, epic: 100, legendary: 250,
+  mythic: 500, ancient: 1000, divine: 2500, secret: 5000, cosmic: 0,
 };
 
-export const MERGE_COST = { common: 50, uncommon: 100, rare: 200, epic: 500, legendary: 1000 };
-export const MERGE_MATRIX = { common: 'uncommon', uncommon: 'rare', rare: 'epic', epic: 'legendary', legendary: null };
+// Merge chain: 2 same rarity → 1 next rarity (same category)
+export const MERGE_MATRIX = {
+  common: 'uncommon', uncommon: 'rare', rare: 'epic', epic: 'legendary',
+  legendary: 'mythic', mythic: 'ancient', ancient: 'divine',
+  divine: 'secret', secret: 'cosmic', cosmic: null,
+};
 
-let _id = 0;
-export function generateItems() {
-  const items = [];
-  for (const cat of CATEGORIES) {
-    for (let ri = 0; ri < RARITIES.length; ri++) {
-      const rarity = RARITIES[ri];
-      const count = Math.max(2, 8 - ri);
-      for (let i = 0; i < count; i++) {
-        const names = ITEM_NAMES[cat.id];
-        const idx = (ri * 2 + i) % names.en.length;
-        items.push({
-          id: _id++,
-          category: cat.id,
-          rarity: rarity.id,
-          name: names.en[idx],
-          nameRu: names.ru[idx],
-          value: (ri + 1) * 10,
-        });
-      }
-    }
-  }
-  return items;
-}
+export const GORILLA_IMAGES = {
+  angry: './src/assets/gorilla-angry.png',
+  happy: './src/assets/gorilla-happy.png',
+  arms: './src/assets/gorilla-arms.png',
+};
 
 export const INITIAL_TUTORIAL = [
   'tut_welcome',
   'tut_tap',
+  'tut_bananas',
   'tut_merge',
-  'tut_collect',
   'tut_done',
 ];

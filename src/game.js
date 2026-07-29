@@ -1,4 +1,5 @@
 import { store } from './store.js';
+import { GORILLA_IMAGES } from './config.js';
 
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
@@ -6,9 +7,18 @@ let animFrame = null;
 let particles = [];
 let floatTexts = [];
 let lastTime = 0;
-let masonBob = 0;
-let masonScale = 1;
+let gorillaState = 'happy';
+let gorillaScale = 1;
 let onTapCallback = null;
+let preloadedImages = {};
+
+function preloadImages() {
+  for (const [key, src] of Object.entries(GORILLA_IMAGES)) {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => { preloadedImages[key] = img; };
+  }
+}
 
 export function initGameCanvas(container, onTap) {
   onTapCallback = onTap;
@@ -16,6 +26,7 @@ export function initGameCanvas(container, onTap) {
   resize();
   window.addEventListener('resize', resize);
   setupClickHandler();
+  preloadImages();
   startLoop();
 }
 
@@ -40,15 +51,16 @@ function setupClickHandler() {
     const y = e.clientY - rect.top;
     const cx = canvas.width / 2;
     const cy = canvas.height * 0.42;
-    const r = 90 * masonScale;
+    const r = 100 * gorillaScale;
     const dx = x - cx;
     const dy = y - cy;
     if (dx * dx + dy * dy < r * r) {
-      const result = store.tapMason();
+      gorillaState = 'arms';
+      setTimeout(() => { gorillaState = 'happy'; }, 300);
+      const result = store.tapGorilla();
       if (result) {
-        spawnParticles(cx, cy - 40, result.gold);
-        spawnFloatText(cx + (Math.random() - 0.5) * 40, cy - 60, `+${result.gold}`, '#f7c948');
-        spawnFloatText(cx + (Math.random() - 0.5) * 30, cy - 80, `+${result.xp} XP`, '#10b981');
+        spawnParticles(cx, cy - 30, result.bananas);
+        spawnFloatText(cx + (Math.random() - 0.5) * 50, cy - 60, '+' + result.bananas, '#f7c948');
         if (onTapCallback) onTapCallback(result);
       }
     }
@@ -78,137 +90,66 @@ function drawBackground(time) {
   const w = canvas.width;
   const h = canvas.height;
   const bg = ctx.createRadialGradient(w * 0.5, h * 0.35, 0, w * 0.5, h * 0.35, w * 0.8);
-  bg.addColorStop(0, '#1a3a1a');
-  bg.addColorStop(0.4, '#0d1f0d');
-  bg.addColorStop(1, '#050a05');
+  bg.addColorStop(0, '#1a1a1a');
+  bg.addColorStop(0.5, '#0d0d0d');
+  bg.addColorStop(1, '#050505');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
-  ctx.fillStyle = '#10b98106';
-  for (let i = 0; i < 40; i++) {
+  ctx.fillStyle = '#10b98108';
+  for (let i = 0; i < 30; i++) {
     const sx = (i * 137.5 + i * i * 7.3) % w;
-    const sy = (i * 89.3 + i * 13.7) % (h * 0.6);
+    const sy = (i * 89.3 + i * 13.7) % (h * 0.5);
     const twinkle = Math.sin(time * 0.0008 + i) * 0.5 + 0.5;
-    ctx.globalAlpha = twinkle * 0.4;
+    ctx.globalAlpha = twinkle * 0.3;
     ctx.beginPath();
     ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-
-  const pillarGrad = ctx.createLinearGradient(0, 0, 0, h);
-  pillarGrad.addColorStop(0, '#10b98108');
-  pillarGrad.addColorStop(1, '#10b98102');
-  ctx.fillStyle = pillarGrad;
-  ctx.fillRect(w * 0.06, h * 0.15, w * 0.025, h * 0.45);
-  ctx.fillRect(w * 0.915, h * 0.15, w * 0.025, h * 0.45);
 }
 
-function drawMason(time) {
+function drawGorilla(time) {
   const w = canvas.width;
   const h = canvas.height;
   const cx = w / 2;
   const cy = h * 0.42;
-  masonScale = Math.min(w, h) / 400;
-  const s = masonScale;
-  const bob = Math.sin(time * 0.0015) * 5;
-  masonBob = bob;
+  gorillaScale = Math.min(w, h) / 500;
+  const s = gorillaScale;
+  const bob = Math.sin(time * 0.0015) * 4;
 
   ctx.save();
   ctx.translate(cx, cy + bob);
 
-  const glow = ctx.createRadialGradient(0, 0, 20 * s, 0, 0, 100 * s);
-  glow.addColorStop(0, '#10b98115');
-  glow.addColorStop(0.5, '#10b98108');
+  const glow = ctx.createRadialGradient(0, 0, 20 * s, 0, 0, 120 * s);
+  glow.addColorStop(0, '#10b98112');
+  glow.addColorStop(0.5, '#10b98106');
   glow.addColorStop(1, 'transparent');
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 0, 100 * s, 0, Math.PI * 2);
+  ctx.arc(0, 0, 120 * s, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#1a4a1a';
-  ctx.beginPath();
-  ctx.moveTo(-25 * s, 10 * s);
-  ctx.lineTo(25 * s, 10 * s);
-  ctx.lineTo(30 * s, 60 * s);
-  ctx.lineTo(-30 * s, 60 * s);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#2d6b2d';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  ctx.fillStyle = '#2d6b2d';
-  ctx.beginPath();
-  ctx.moveTo(-30 * s, 60 * s);
-  ctx.lineTo(30 * s, 60 * s);
-  ctx.lineTo(35 * s, 80 * s);
-  ctx.lineTo(-35 * s, 80 * s);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#c4956a';
-  ctx.beginPath();
-  ctx.arc(0, -10 * s, 18 * s, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#5a3a2a';
-  ctx.beginPath();
-  ctx.ellipse(0, 2 * s, 12 * s, 8 * s, 0, 0, Math.PI);
-  ctx.fill();
-
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath();
-  ctx.arc(-6 * s, -12 * s, 2.5 * s, 0, Math.PI * 2);
-  ctx.arc(6 * s, -12 * s, 2.5 * s, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#10b981';
-  ctx.beginPath();
-  ctx.arc(-6 * s, -12 * s, 1 * s, 0, Math.PI * 2);
-  ctx.arc(6 * s, -12 * s, 1 * s, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#0d3d0d';
-  ctx.beginPath();
-  ctx.arc(0, -28 * s, 22 * s, Math.PI, 0, true);
-  ctx.lineTo(22 * s, -20 * s);
-  ctx.quadraticCurveTo(0, -14 * s, -22 * s, -20 * s);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#1a5a1a';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  const outfit = store.state.outfit;
-  if (outfit.head) {
-    ctx.fillStyle = '#f7c94844';
+  const img = preloadedImages[gorillaState] || preloadedImages.happy;
+  if (img) {
+    const imgW = 280 * s;
+    const imgH = 300 * s;
+    ctx.drawImage(img, -imgW / 2, -imgH / 2 + 10 * s, imgW, imgH);
+  } else {
+    ctx.fillStyle = '#2a2a2a';
     ctx.beginPath();
-    ctx.arc(0, -30 * s, 25 * s, Math.PI, 0, true);
+    ctx.arc(0, -10 * s, 35 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.ellipse(0, 30 * s, 30 * s, 40 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.arc(-10 * s, -15 * s, 4 * s, 0, Math.PI * 2);
+    ctx.arc(10 * s, -15 * s, 4 * s, 0, Math.PI * 2);
     ctx.fill();
   }
-  if (outfit.body) {
-    ctx.fillStyle = '#3b82f622';
-    ctx.fillRect(-22 * s, 12 * s, 44 * s, 30 * s);
-  }
-  if (outfit.accessory) {
-    ctx.fillStyle = '#a855f744';
-    ctx.beginPath();
-    ctx.arc(0, -8 * s, 6 * s, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.strokeStyle = '#c4956a';
-  ctx.lineWidth = 4 * s;
-  const armWave = Math.sin(time * 0.002) * 4;
-  ctx.beginPath();
-  ctx.moveTo(-25 * s, 18 * s);
-  ctx.lineTo(-40 * s, 30 * s + armWave);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(25 * s, 18 * s);
-  ctx.lineTo(40 * s, 30 * s - armWave);
-  ctx.stroke();
 
   ctx.restore();
 }
@@ -241,7 +182,7 @@ function drawParticles() {
   for (const f of floatTexts) {
     ctx.globalAlpha = f.life;
     ctx.fillStyle = f.color;
-    ctx.font = `bold ${14}px monospace`;
+    ctx.font = 'bold 16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(f.text, f.x, f.y);
   }
@@ -253,7 +194,7 @@ function loop(time) {
   lastTime = time;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground(time);
-  drawMason(time);
+  drawGorilla(time);
   updateParticles();
   drawParticles();
   animFrame = requestAnimationFrame(loop);
