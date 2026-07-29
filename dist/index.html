@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101521" />
+  <title>Gorilla Merge</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module" crossorigin src="./assets/index-1MsouT2K.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DSNS33Zj.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="profile">
+        <div class="profile-avatar">S</div>
+        <div class="profile-info">
+          <strong id="clanName">СТАЯ</strong>
+          <small id="userLevel">LVL 1</small>
+        </div>
+      </div>
+      <div class="balances">
+        <span><span class="gem-icon">🍌</span> <b id="bananas">0</b></span>
+        <span><span class="star-icon">💎</span> <b id="gems">0</b></span>
+      </div>
+    </header>
+    <section id="screen" class="screen"></section>
+    <nav class="bottom-nav" aria-label="Навигация">
+      <button data-tab="market"><span class="nav-icon">📈</span><span class="nav-label">РЫНОК</span></button>
+      <button data-tab="inventory"><span class="nav-icon">🏋️</span><span class="nav-label">ГАНТЕЛИ</span></button>
+      <button data-tab="gorillas" class="active"><span class="nav-icon">🦍</span><span class="nav-label">ГОРИЛЛЫ</span></button>
+      <button data-tab="clan"><span class="nav-icon">⚡</span><span class="nav-label">БОГИ</span></button>
+      <button data-tab="quests"><span class="nav-icon">✓</span><span class="nav-label">ЗАДАНИЯ</span><span class="badge" style="display:none"></span></button>
+    </nav>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+  <div id="bottomSheet" class="bottom-sheet-overlay">
+    <div class="bottom-sheet">
+      <div class="bottom-sheet-header">
+        <h2 id="sheetTitle"></h2>
+        <button class="bottom-sheet-close" id="sheetClose">&times;</button>
+      </div>
+      <div id="sheetContent"></div>
+    </div>
+  </div>
+</body>
+</html>
