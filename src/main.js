@@ -40,6 +40,50 @@ const MARKET_LOTS = [
   { id: 'lot5', gorillaId: 'g5', name: 'ТИТАН', rarity: 4, level: 1, bid: 7500, timer: 9000 }
 ];
 
+const DUMBELL_NAMES = {
+  1: 'Железная', 2: 'Стальная', 3: 'Серебряная', 4: 'Золотая',
+  5: 'Рубиновая', 6: 'Сапфировая', 7: 'Изумрудная', 8: 'Алмазная',
+  9: 'Космическая', 10: 'Легендарная'
+};
+
+const TUTORIAL_STEPS = [
+  {
+    target: '.gorilla-main-img',
+    side: 'right',
+    title: 'Привет! Я твой горилла-гаид! 🦍',
+    text: 'Добро пожаловать в Gorilla Merge! Я буду помогать тебе разобраться. Нажми далее чтобы продолжить.',
+    gorilla: 'happy'
+  },
+  {
+    target: '.grid',
+    side: 'bottom',
+    title: 'Игровое поле 7×7',
+    text: 'Здесь ты соединяешь одинаковые гантели. Перетащи одну на другую — они станут сильнее и дадут бананы!',
+    gorilla: 'point'
+  },
+  {
+    target: '.btn-feed',
+    side: 'bottom',
+    title: 'Корми горилл!',
+    text: 'Нажми кнопку чтобы накормить гориллу. За 75 бананов ты получаешь +10% прогресса. Когда прогресс reaching 100% — уровень растёт!',
+    gorilla: 'happy'
+  },
+  {
+    target: '.shop-list',
+    side: 'left',
+    title: 'Магазин горилл',
+    text: 'Покупай новых горилл разной редкости. Чем выше редкость — тем мощнее бонусы!',
+    gorilla: 'point'
+  },
+  {
+    target: '.queue-card',
+    side: 'top',
+    title: 'Очередь гантелей',
+    text: 'Нажми на гантель в очереди чтобы положить её на поле. Новые гантели появляются автоматически!',
+    gorilla: 'happy'
+  }
+];
+
 const state = {
   tab: 'inventory',
   bananas: 1280,
@@ -62,7 +106,9 @@ const state = {
   totalBananasEarned: 0,
   userId: '',
   walletConnected: false,
-  walletAddr: ''
+  walletAddr: '',
+  tutorialStep: 0,
+  tutorialDone: false
 };
 
 const $ = s => document.querySelector(s);
@@ -180,12 +226,14 @@ function inventory() {
 function bindGrid() {
   const cells = document.querySelectorAll('#merge-grid .cell');
   let dragIdx = null;
+  let dragStart = null;
 
   cells.forEach(cell => {
     cell.addEventListener('pointerdown', e => {
       const idx = parseInt(cell.dataset.idx);
       if (!state.grid[idx]) return;
       dragIdx = idx;
+      dragStart = { x: e.clientX, y: e.clientY };
       cell.classList.add('dragging');
       e.preventDefault();
     });
@@ -193,7 +241,16 @@ function bindGrid() {
     cell.addEventListener('pointerup', e => {
       if (dragIdx === null) return;
       const targetIdx = parseInt(cell.dataset.idx);
-      if (dragIdx === targetIdx) { dragIdx = null; cell.classList.remove('dragging'); return; }
+      const dx = e.clientX - (dragStart?.x || 0);
+      const dy = e.clientY - (dragStart?.y || 0);
+      const moved = Math.abs(dx) + Math.abs(dy);
+
+      if (dragIdx === targetIdx && moved < 10) {
+        showDumbbellDetail(state.grid[dragIdx]);
+        dragIdx = null;
+        cell.classList.remove('dragging');
+        return;
+      }
       tryMerge(dragIdx, targetIdx);
       dragIdx = null;
       cells.forEach(c => c.classList.remove('dragging'));
@@ -329,6 +386,25 @@ function bindGorillas() {
     btn.addEventListener('click', () => {
       const gid = btn.dataset.buy;
       buyGorilla(gid);
+    });
+  });
+
+  document.querySelectorAll('.shop-card').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('.btn-buy')) return;
+      const gid = card.dataset.gid;
+      const shopItem = GORILLA_SHOP.find(g => g.id === gid);
+      if (shopItem) showGorillaDetail(shopItem);
+    });
+  });
+
+  document.querySelectorAll('.gorilla-main-img').forEach(img => {
+    img.addEventListener('click', () => {
+      const g = state.gorillas[state.gorillaIndex];
+      if (g) {
+        const shopItem = GORILLA_SHOP.find(s => s.id === g.id) || { id: g.id, name: g.name, rarity: g.rarity, price: 0 };
+        showGorillaDetail(shopItem);
+      }
     });
   });
 
@@ -490,6 +566,14 @@ function bindMarket() {
     btn.addEventListener('click', () => {
       const lotId = btn.dataset.bid;
       placeBid(lotId);
+    });
+  });
+
+  document.querySelectorAll('.lot-card').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('.btn-bid')) return;
+      const lotId = card.dataset.lot;
+      showLotDetail(lotId);
     });
   });
 
@@ -720,6 +804,220 @@ async function loadStateFromFirebase(userId) {
   }
 }
 
+// ── TUTORIAL SYSTEM ──
+
+function showTutorial() {
+  const step = TUTORIAL_STEPS[state.tutorialStep];
+  if (!step) { closeTutorial(); return; }
+
+  let overlay = document.getElementById('tutorial-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tutorial-overlay';
+    overlay.className = 'tutorial-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  const gorillaImg = ASSET + (step.gorilla === 'happy' ? 'gorilla-02.png' : 'gorilla-03.png');
+
+  overlay.innerHTML = `
+    <div class="tutorial-spotlight" data-target="${step.target}"></div>
+    <div class="tutorial-hand" data-side="${step.side}">👆</div>
+    <div class="tutorial-bubble" data-side="${step.side}">
+      <div class="tutorial-gorilla">
+        <img src="${gorillaImg}" class="tutorial-gorilla-img" draggable="false" />
+      </div>
+      <div class="tutorial-text">
+        <div class="tutorial-title">${step.title}</div>
+        <div class="tutorial-desc">${step.text}</div>
+      </div>
+    </div>
+    <div class="tutorial-controls">
+      <span class="tutorial-step">${state.tutorialStep + 1} / ${TUTORIAL_STEPS.length}</span>
+      <button class="tutorial-btn tutorial-skip" id="tutorial-skip">Пропустить</button>
+      <button class="tutorial-btn tutorial-next" id="tutorial-next">${state.tutorialStep < TUTORIAL_STEPS.length - 1 ? 'Далее →' : 'Начать! 🚀'}</button>
+    </div>
+  `;
+
+  overlay.classList.add('show');
+
+  requestAnimationFrame(() => positionTutorial(step.target, step.side));
+
+  document.getElementById('tutorial-skip').addEventListener('click', closeTutorial);
+  document.getElementById('tutorial-next').addEventListener('click', () => {
+    state.tutorialStep++;
+    if (state.tutorialStep >= TUTORIAL_STEPS.length) {
+      closeTutorial();
+    } else {
+      showTutorial();
+    }
+    haptic('tab');
+  });
+}
+
+function positionTutorial(targetSel, side) {
+  const target = document.querySelector(targetSel);
+  const spotlight = document.querySelector('.tutorial-spotlight');
+  const hand = document.querySelector('.tutorial-hand');
+  const bubble = document.querySelector('.tutorial-bubble');
+
+  if (!target || !spotlight) return;
+
+  const rect = target.getBoundingClientRect();
+  spotlight.style.top = rect.top + 'px';
+  spotlight.style.left = rect.left + 'px';
+  spotlight.style.width = rect.width + 'px';
+  spotlight.style.height = rect.height + 'px';
+
+  if (hand) {
+    const hx = side === 'left' ? rect.left - 40 : side === 'right' ? rect.right + 10 : rect.left + rect.width / 2 - 15;
+    const hy = side === 'top' ? rect.top - 50 : side === 'bottom' ? rect.bottom + 10 : rect.top + rect.height / 2 - 15;
+    hand.style.left = hx + 'px';
+    hand.style.top = hy + 'px';
+  }
+
+  if (bubble) {
+    const bx = side === 'left' ? rect.left - 10 : side === 'right' ? rect.right + 20 : rect.left + rect.width / 2;
+    const by = side === 'top' ? rect.top - 180 : side === 'bottom' ? rect.bottom + 60 : rect.top + rect.height / 2 - 60;
+    bubble.style.left = Math.max(10, Math.min(bx, window.innerWidth - 290)) + 'px';
+    bubble.style.top = Math.max(10, by) + 'px';
+  }
+}
+
+function closeTutorial() {
+  const overlay = document.getElementById('tutorial-overlay');
+  if (overlay) overlay.remove();
+  state.tutorialDone = true;
+  localStorage.setItem('gm_tutorial_done', '1');
+}
+
+function checkTutorial() {
+  if (!localStorage.getItem('gm_tutorial_done')) {
+    setTimeout(() => showTutorial(), 600);
+  }
+}
+
+// ── ITEM DETAIL POPUPS ──
+
+function showDumbbellDetail(level) {
+  const nextLevel = level < 10 ? level + 1 : null;
+  const name = DUMBELL_NAMES[level] || `Уровень ${level}`;
+  const nextName = nextLevel ? DUMBELL_NAMES[nextLevel] : null;
+  const earn = level * 5;
+
+  let pathHtml = '';
+  let lv = level;
+  while (lv < 10) {
+    const n = lv + 1;
+    pathHtml += `<div class="path-step">
+      <img src="${image(lv)}" class="path-img" />
+      <span class="path-arrow">→</span>
+      <img src="${image(n)}" class="path-img" />
+    </div>`;
+    lv = n;
+  }
+
+  showBottomSheet(`
+    <div class="detail-header">
+      <img src="${image(level)}" class="detail-img" />
+      <div class="detail-info">
+        <div class="detail-name">${name}</div>
+        <div class="detail-level">Уровень ${level}</div>
+        <div class="detail-earn">+${earn} 🍌 за слияние</div>
+      </div>
+    </div>
+    ${nextLevel ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Путь улучшения</div>
+        <div class="detail-path">
+          ${pathHtml}
+        </div>
+        <div class="detail-note">Соедини 2 одинаковые чтобы получить ${nextName || 'следующий уровень'}</div>
+      </div>
+    ` : `
+      <div class="detail-section">
+        <div class="detail-section-title">МАКСИМУМ!</div>
+        <div class="detail-note">Это самая сильная гантель! Держи её гордо 💪</div>
+      </div>
+    `}
+    <button class="btn-sheet-close" id="sheet-close">ЗАКРЫТЬ</button>
+  `);
+}
+
+function showGorillaDetail(shopItem) {
+  const r = getRarity(shopItem.rarity);
+  const owned = state.gorillas.find(g => g.id === shopItem.id);
+
+  let statsHtml = '';
+  if (owned) {
+    statsHtml = `
+      <div class="detail-stats">
+        <div class="detail-stat"><span class="stat-val">${owned.level}</span><span class="stat-lbl">Уровень</span></div>
+        <div class="detail-stat"><span class="stat-val">${owned.feed}%</span><span class="stat-lbl">Прогресс</span></div>
+        <div class="detail-stat"><span class="stat-val">${owned.cooldownEnd > Date.now() ? '⏳' : '✓'}</span><span class="stat-lbl">Статус</span></div>
+      </div>`;
+  }
+
+  showBottomSheet(`
+    <div class="detail-header">
+      <div class="detail-gorilla-frame" style="border:3px solid ${r.color};box-shadow:0 0 25px ${r.glow};">
+        <img src="${getGorillaImg(shopItem.rarity)}" class="detail-gorilla-img" />
+      </div>
+      <div class="detail-info">
+        <div class="detail-name" style="color:${r.color}">${shopItem.name}</div>
+        <div class="rarity-badge" style="background:${r.color}">${r.name}</div>
+        <div class="detail-price">${shopItem.price} 🍌</div>
+      </div>
+    </div>
+    ${statsHtml}
+    <div class="detail-section">
+      <div class="detail-section-title">Особенности</div>
+      <div class="detail-perks">
+        <div class="perk">🦴 Кормление: 75 🍌 за +10%</div>
+        <div class="perk">⚡ Бонус: x${(shopItem.rarity + 1) * 0.5} к бананам</div>
+        <div class="perk">🛡 Защита клана: +${shopItem.rarity * 2}%</div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Все редкости</div>
+      <div class="detail-rarity-list">
+        ${RARITIES.map((rr, i) => `<div class="rarity-row${i === shopItem.rarity ? ' active' : ''}" style="border-color:${rr.color}">
+          <span class="rarity-dot" style="background:${rr.color}"></span>
+          <span>${rr.name}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <button class="btn-sheet-close" id="sheet-close">ЗАКРЫТЬ</button>
+  `);
+}
+
+function showLotDetail(lotId) {
+  const lot = MARKET_LOTS.find(l => l.id === lotId);
+  if (!lot) return;
+  const r = getRarity(lot.rarity);
+  const sold = lot.timer <= 0;
+  const bidCost = Math.floor(lot.bid * 0.5);
+
+  showBottomSheet(`
+    <div class="detail-header">
+      <div class="detail-gorilla-frame" style="border:3px solid ${r.color};box-shadow:0 0 25px ${r.glow};">
+        <img src="${getGorillaImg(lot.rarity)}" class="detail-gorilla-img" />
+      </div>
+      <div class="detail-info">
+        <div class="detail-name" style="color:${r.color}">${lot.name}</div>
+        <div class="rarity-badge" style="background:${r.color}">${r.name}</div>
+        <div class="detail-level">Уровень ${lot.level}</div>
+      </div>
+    </div>
+    <div class="detail-stats">
+      <div class="detail-stat"><span class="stat-val">${formatTime(lot.timer)}</span><span class="stat-lbl">Осталось</span></div>
+      <div class="detail-stat"><span class="stat-val">${lot.bid} 🍌</span><span class="stat-lbl">Текущая ставка</span></div>
+      <div class="detail-stat"><span class="stat-val">${bidCost} 🍌</span><span class="stat-lbl">Стоимость ставки</span></div>
+    </div>
+    <button class="btn-sheet-close" id="sheet-close">${sold ? 'ПРОДАНО' : 'СТАВКА ' + bidCost + ' 🍌'}</button>
+  `);
+}
+
 async function init() {
   state.userId = getOrCreateUserId();
   initWallet();
@@ -731,6 +1029,7 @@ async function init() {
 
   await loadStateFromFirebase(state.userId);
   render();
+  checkTutorial();
 
   setInterval(() => saveUserData(state.userId, getSerializableState()), 30000);
 
