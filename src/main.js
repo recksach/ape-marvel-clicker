@@ -72,8 +72,8 @@ const state = {
   referralCode: '',
   referredBy: '',
   referrerRewarded: false,
-  collectibles: [], // { cellIdx, level, timer }
-  trainingBoost: 0 // multiplier (1 = normal, 2 = 2x)
+  pendingTrainingCollect: 0,
+  trainingBoost: 0
 };
 
 // Generate locked cells — only center 3×3 open
@@ -138,6 +138,7 @@ function gorillas() {
   const dumbbellOverlay = trainingPose ? `<img src="${image(Math.max(1, r.dumbbellLevel))}" class="training-dumbbell" />` : '';
 
   const boostCost = 50 + g.level * 10;
+  const pendingCollect = state.pendingTrainingCollect || 0;
 
   let content = `
     <div class="gorilla-full">
@@ -150,6 +151,7 @@ function gorillas() {
           <div class="gorilla-img-container">
             <img src="${gorillaImg}" class="gorilla-tap-img" id="gorilla-img" draggable="false" />
             ${dumbbellOverlay}
+            ${pendingCollect > 0 ? `<div class="training-collectibles">${Array(pendingCollect).fill('<span class="tc-item">🏋️</span>').join('')}<div class="tc-label">Тапни чтобы собрать!</div></div>` : ''}
           </div>`;
 
   if (inTraining) {
@@ -218,9 +220,7 @@ function inventory() {
   for(let i=0;i<49;i++) {
     const lv=state.grid[i]||0;
     const locked=isLocked(i);
-    const collectible = state.collectibles.find(c => c.cellIdx === i);
     if(locked) gridHtml+=`<div class="cell locked" data-idx="${i}"><span class="locked-buy">🔒 ${(i+1)*5}🍌</span></div>`;
-    else if (collectible) gridHtml+=`<div class="cell collectible" data-idx="${i}">${item(collectible.level, ' collectible-item')}<span class="collectible-glow">✨</span></div>`;
     else gridHtml+=`<div class="cell" data-idx="${i}">${lv?`<span class="level-badge">${lv}</span>${item(lv)}`:''}</div>`;
   }
   let queueHtml=state.queue.map((lv,i)=>`<div class="q-item" data-qidx="${i}">${item(lv)}<span class="q-timer">${i===0?'Готово':'02:'+String(27+i*3).padStart(2,'0')}</span></div>`).join('');
@@ -329,6 +329,30 @@ function createBananaParticle(e) {
 function tapGorilla(e) {
   const g = state.gorillas[state.gorillaIndex];
   if (!g) return;
+
+  // Если есть ожидающие коллектаблы с тренировки — собираем их
+  if (state.pendingTrainingCollect > 0) {
+    const count = state.pendingTrainingCollect;
+    const r = getRarity(g.rarity);
+    const earnedLevel = Math.max(1, r.dumbbellLevel);
+    for (let i = 0; i < count; i++) {
+      const emptyIdx = state.grid.indexOf(0);
+      if (emptyIdx >= 0 && !isLocked(emptyIdx)) {
+        state.grid[emptyIdx] = earnedLevel;
+      } else {
+        state.queue.push(earnedLevel);
+      }
+    }
+    state.pendingTrainingCollect = 0;
+    haptic('collect');
+    toast(`+${count} гантелей собрано! 🏋️`);
+    updateQuestProgress('bananas');
+    sync();
+    renderGorillaOnly();
+    return;
+  }
+
+  // Обычный тап для кормления
   const r = getRarity(g.rarity);
   const cost = Math.floor(r.tapCostBase + g.tapCount * 1.5);
   if (g.trainingEnd > Date.now()) return;
@@ -501,7 +525,7 @@ function bindGorillaScreen() {
 }
 
 function bindGrid() {
-  const cells = document.querySelectorAll('#merge-grid .cell:not(.locked):not(.collectible)');
+  const cells = document.querySelectorAll('#merge-grid .cell:not(.locked)');
   // Buy locked cells
   document.querySelectorAll('#merge-grid .cell.locked').forEach(cell => {
     cell.addEventListener('click', () => {
@@ -514,13 +538,6 @@ function bindGrid() {
       toast(`Ячейка открыта! -${price} 🍌`);
       sync();
       render();
-    });
-  });
-  // Collectible cells
-  document.querySelectorAll('#merge-grid .cell.collectible').forEach(cell => {
-    cell.addEventListener('click', e => {
-      e.stopPropagation();
-      collectFromCell(parseInt(cell.dataset.idx));
     });
   });
   let dragIdx = null;
@@ -1030,7 +1047,7 @@ document.addEventListener('pointerdown', e => {
   const tapArea = e.target.closest('#gorilla-tap-area');
   if (!tapArea) return;
   if (e.target.closest('button')) return;
-  if (e.target.closest('.training-overlay')) return;
+  if (e.target.closest('.training-done')) return;
   tapGorilla(e);
 });
 
@@ -1039,7 +1056,7 @@ function getSerializableState() {
     gorillas: state.gorillas, totalTaps: state.totalTaps, totalTrainingSends: state.totalTrainingSends,
     totalBananasEarned: state.totalBananasEarned, quests: state.quests, lockedCells: state.lockedCells,
     tutorialDone: state.tutorialDone, referralCode: state.referralCode, referredBy: state.referredBy,
-    referrerRewarded: state.referrerRewarded, collectibles: state.collectibles };
+    referrerRewarded: state.referrerRewarded, pendingTrainingCollect: state.pendingTrainingCollect };
 }
 
 async function loadStateFromFirebase(userId) {
@@ -1074,7 +1091,7 @@ async function loadStateFromFirebase(userId) {
       if (data.referralCode) state.referralCode = data.referralCode;
       if (data.referredBy) state.referredBy = data.referredBy;
       if (data.referrerRewarded) state.referrerRewarded = data.referrerRewarded;
-      if (data.collectibles) state.collectibles = data.collectibles;
+      if (data.pendingTrainingCollect !== undefined) state.pendingTrainingCollect = data.pendingTrainingCollect;
     }
   } catch (e) {
     console.warn('Failed to load from Firebase:', e);
@@ -1114,39 +1131,15 @@ function boostTraining() {
   render();
 }
 
-// ── COLLECTIBLE DUMBBELLS ON GRID ──
-function spawnCollectible() {
-  state.collectibles = state.collectibles.filter(c => state.grid[c.cellIdx] === 0 && !isLocked(c.cellIdx));
-  const emptyCells = [];
-  for (let i = 0; i < 49; i++) {
-    if (state.grid[i] === 0 && !isLocked(i)) emptyCells.push(i);
-  }
-  if (emptyCells.length === 0) return;
-  // Не спавним на клетке где уже есть коллектабл
-  const used = new Set(state.collectibles.map(c => c.cellIdx));
-  const avail = emptyCells.filter(i => !used.has(i));
-  if (avail.length === 0) return;
-  const idx = avail[Math.floor(Math.random() * avail.length)];
-  const lv = Math.ceil(Math.random() * Math.min(5, Math.floor(state.totalTrainingSends / 2) + 1));
-  state.collectibles.push({ cellIdx: idx, level: lv, timer: 120 });
-  if (state.tab === 'inventory') render();
-}
-
-function collectFromCell(idx) {
-  const ci = state.collectibles.findIndex(c => c.cellIdx === idx);
-  if (ci === -1) return;
-  const c = state.collectibles[ci];
-  const emptyIdx = state.grid.indexOf(0);
-  if (emptyIdx >= 0 && !isLocked(emptyIdx)) {
-    state.grid[emptyIdx] = c.level;
-  } else {
-    state.queue.push(c.level);
-  }
-  state.collectibles.splice(ci, 1);
-  toast(`+${DUMBBELL_NAMES[c.level] || c.level} 🏋️`);
-  haptic('collect');
-  updateQuestProgress('bananas');
-  render();
+// ── TRAINING COLLECTIBLES ──
+// Во время тренировки каждые 15 секунд появляется гантель на горилле
+function tickTrainingCollect() {
+  const g = state.gorillas[state.gorillaIndex];
+  if (!g || g.trainingEnd <= Date.now()) return;
+  // Максимум 5 не собранных
+  if (state.pendingTrainingCollect >= 5) return;
+  state.pendingTrainingCollect++;
+  if (state.tab === 'gorillas') renderGorillaOnly();
 }
 
 // ── REFERRAL ──
@@ -1193,12 +1186,8 @@ async function init() {
     MARKET_LOTS.forEach(lot => { if(lot.timer > 0) { lot.timer--; changed = true; } });
     if(changed && (state.tab==='gorillas' || state.tab==='market')) render();
   }, 1000);
-  // Спавн коллектаблов каждые 12 секунд
-  setInterval(() => spawnCollectible(), 12000);
-  // Обновляем коллектаблы каждые 5 сек
-  setInterval(() => {
-    if (state.collectibles.length > 0 && state.tab === 'inventory') render();
-  }, 5000);
+  // Генерация коллектаблов на горилле каждые 15 сек
+  setInterval(() => tickTrainingCollect(), 15000);
 }
 
 // ── TUTORIAL ──

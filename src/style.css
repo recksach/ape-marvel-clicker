@@ -1255,11 +1255,8 @@ img{-webkit-user-drag:none;user-select:none}
 .btn-referral:active{transform:scale(.96)}
 .ape-coin-balance{font-size:13px;font-weight:700;color:#ffd34e;white-space:nowrap}
 
-/* ── COLLECTIBLE CELL ── */
-.cell.collectible{background:linear-gradient(145deg,#2a3020,#1a2510);border-color:#7a6a30;cursor:pointer;animation:collectible-pulse 1.2s ease-in-out infinite}
-.cell.collectible:active{transform:scale(.9)}
-@keyframes collectible-pulse{0%,100%{box-shadow:inset 0 0 10px #ffd34e33}50%{box-shadow:inset 0 0 20px #ffd34e66}}
-.collectible-item{animation:collectible-float 1.5s ease-in-out infinite}
-@keyframes collectible-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-.collectible-glow{position:absolute;top:2px;right:2px;font-size:10px;animation:collectible-spark 1s ease-in-out infinite;pointer-events:none}
-@keyframes collectible-spark{0%,100%{opacity:.5;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+/* ── TRAINING COLLECTIBLES ON GORILLA ── */
+.training-collectibles{position:absolute;top:-10px;right:-10px;display:flex;flex-direction:column;align-items:center;gap:2px;animation:tc-bounce 1s ease-in-out infinite}
+.tc-item{font-size:20px;filter:drop-shadow(0 0 8px #ffd34e)}
+.tc-label{font-size:9px;color:#ffd34e;font-weight:700;white-space:nowrap;text-shadow:0 1px 4px #000}
+@keyframes tc-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
