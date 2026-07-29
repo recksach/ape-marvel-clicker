@@ -16,8 +16,8 @@ function getRarity(r) { return RARITIES[r] || RARITIES[0]; }
 function getGorillaImg(r, training) {
   const map = ['common','uncommon','rare','epic','legendary'];
   const f = map[r] || 'common';
-  if (training) return `gorilla-03.png`;
-  return `gorilla-${f}.png`;
+  if (training) return `assets/gorilla-03.png`;
+  return `assets/gorilla-${f}.png`;
 }
 
 function image(l) {
@@ -1063,10 +1063,10 @@ function showTutorial() {
   overlay.className = 'tutorial-overlay';
   overlay.innerHTML = `
 <div class="tutorial-backdrop"></div>
+<div class="tutorial-hand" id="tutorial-hand">👇</div>
 <div class="tutorial-card">
   <div class="tutorial-title">${step.title}</div>
   <div class="tutorial-text">${step.text}</div>
-  <div class="tutorial-pointer tutorial-pointer-${step.pointer}">👇</div>
   <div class="tutorial-actions">
     <button class="tutorial-skip" onclick="closeTutorial()">Пропустить</button>
     <button class="tutorial-next" onclick="nextTutorialStep()">${state.tutorialStep === steps.length - 1 ? 'Готово!' : 'Далее'}</button>
@@ -1085,37 +1085,46 @@ function showTutorial() {
 
 function positionTutorial(overlay, targetEl, step) {
   const card = overlay.querySelector('.tutorial-card');
+  const hand = overlay.querySelector('.tutorial-hand');
   if (!card) return;
   const targetRect = targetEl.getBoundingClientRect();
-  const cardRect = card.getBoundingClientRect();
-  let top, left;
 
-  if (step.pointer === 'bottom') {
-    top = targetRect.bottom + 10;
-    left = targetRect.left + targetRect.width / 2 - cardRect.width / 2;
-  } else if (step.pointer === 'top') {
-    top = targetRect.top - cardRect.height - 50;
-    left = targetRect.left + targetRect.width / 2 - cardRect.width / 2;
+  // Position card near target
+  const cardW = 280;
+  let cardTop, cardLeft;
+  if (step.pointer === 'top') {
+    cardTop = Math.max(10, targetRect.top - 90);
+    cardLeft = Math.max(10, Math.min(targetRect.left + targetRect.width / 2 - cardW / 2, window.innerWidth - cardW - 10));
   } else {
-    top = targetRect.bottom + 10;
-    left = targetRect.left + targetRect.width / 2 - cardRect.width / 2;
+    cardTop = Math.min(window.innerHeight - 100, targetRect.bottom + 10);
+    cardLeft = Math.max(10, Math.min(targetRect.left + targetRect.width / 2 - cardW / 2, window.innerWidth - cardW - 10));
+    if (cardTop < targetRect.bottom + 10) cardTop = targetRect.bottom + 10;
   }
 
-  top = Math.max(10, Math.min(top, window.innerHeight - cardRect.height - 10));
-  left = Math.max(10, Math.min(left, window.innerWidth - cardRect.width - 10));
-
   card.style.position = 'fixed';
-  card.style.top = top + 'px';
-  card.style.left = left + 'px';
+  card.style.top = cardTop + 'px';
+  card.style.left = cardLeft + 'px';
 
-  if (step.spotlight) {
-    const backdrop = overlay.querySelector('.tutorial-backdrop');
-    if (backdrop && targetEl) {
-      const r = targetEl.getBoundingClientRect();
-      backdrop.style.setProperty('--spotlight-x', r.left + r.width / 2 + 'px');
-      backdrop.style.setProperty('--spotlight-y', r.top + r.height / 2 + 'px');
-      backdrop.style.setProperty('--spotlight-r', Math.max(r.width, r.height) / 2 + 20 + 'px');
+  // Position hand near target
+  if (hand) {
+    let hx = targetRect.left + targetRect.width / 2 - 18;
+    let hy;
+    if (step.pointer === 'top') {
+      hy = targetRect.top - 40;
+    } else {
+      hy = targetRect.bottom + 5;
     }
+    hand.style.left = hx + 'px';
+    hand.style.top = hy + 'px';
+  }
+
+  // Spotlight backdrop
+  const backdrop = overlay.querySelector('.tutorial-backdrop');
+  if (backdrop && step.spotlight) {
+    const r = targetEl.getBoundingClientRect();
+    backdrop.style.setProperty('--spotlight-x', (r.left + r.width / 2) + 'px');
+    backdrop.style.setProperty('--spotlight-y', (r.top + r.height / 2) + 'px');
+    backdrop.style.setProperty('--spotlight-r', Math.max(r.width, r.height) / 2 + 16 + 'px');
   }
 }
 
